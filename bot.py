@@ -39,21 +39,16 @@ async def start_handler(message: types.Message):
         await db.add_user(user_id, username, full_name)
         welcome_text = (
             f"Salom, {full_name}! 👋\n"
-            f"Dunyodagi eng qiziqarli animelar olamiga xush kelibsiz! Bu yerda siz:\n"
-            f"🔍 Izlash — Sevimli animengizni topishingiz;\n"
-            f"⭐ Tanlanganlar — O'zingizga yoqqanlarini saqlashingiz;\n"
-            f"🎲 Tasodifiy — Nima ko'rishni bilmayotgan bo'lsangiz, tavsiyalar olishingiz mumkin.\n"
+            f"Dunyodagi eng qiziqarli animelar olamiga xush kelibsiz!\n"
             f"Pastdagi tugmalardan birini tanlang:"
         )
         await message.answer(welcome_text, reply_markup=kb.get_start_buttons())
     else:
-        # Kunlik kirish balli
         await db.update_points(user_id, 10)
         re_text = (
             f"Sizni yana koʻrganimizdan xursandmiz! {full_name}👋\n"
             f"🆔 ID: {user_id}\n"
-            f"🔑 ADK: {user_data.get('adk_id')}\n\n"
-            f"Bugun nima koʻramiz? Tanlanganlar roʻyxatingizda yangi qismlar chiqib qolgan boʻlishi mumkin!\n\n"
+            f"🔑 ADK: {user_data.get('adk_id', 'Mavjud emas')}\n\n"
             f"Davom etish uchun menyudan kerakli boʻlimni tanlang:"
         )
         await message.answer(re_text, reply_markup=kb.get_main_menu())
@@ -62,14 +57,27 @@ async def start_handler(message: types.Message):
 async def profile_handler(callback: types.CallbackQuery):
     await callback.answer()
     user = await db.get_user(callback.from_user.id)
+    
+    if not user:
+        await callback.message.answer("Profilingiz topilmadi. Iltimos, /start bosing.")
+        return
+
+    # KeyError oldini olish uchun .get() ishlatamiz
+    f_name = user.get('full_name', callback.from_user.full_name)
+    lvl = user.get('level', 'Yangi boshlovchi 🌱')
+    pts = user.get('points', 0)
+    w_count = user.get('watched_count', 0)
+    a_id = user.get('adk_id', 'Mavjud emas')
+
     profile_text = (
         f"👤 Foydalanuvchi Profili\n\n"
-        f"👤 Ism: {user['full_name']}\n"
-        f"🎖 Daraja: {user['level']}\n"
-        f"🪙 Jami ballar: {user['points']} 🪙\n"
-        f"🎬 Ko‘rilgan animelar: {user['watched_count']} ta\n"
-        f"🔑 ADK: {user['adk_id']}"
+        f"👤 Ism: {f_name}\n"
+        f"🎖 Daraja: {lvl}\n"
+        f"🪙 Jami ballar: {pts} 🪙\n"
+        f"🎬 Ko‘rilgan animelar: {w_count} ta\n"
+        f"🔑 ADK: {a_id}"
     )
+    
     try:
         await callback.message.edit_text(profile_text, reply_markup=kb.profile_buttons())
     except Exception:
@@ -87,7 +95,8 @@ async def back_main(callback: types.CallbackQuery):
 async def shop_menu(callback: types.CallbackQuery):
     await callback.answer()
     user = await db.get_user(callback.from_user.id)
-    text = f"🛒 Do'kon\nBalingiz: {user['points']} 🪙\n\nSotib olish uchun tugmani bosing:"
+    pts = user.get('points', 0)
+    text = f"🛒 Do'kon\nBalingiz: {pts} 🪙\n\nSotib olish uchun tugmani bosing:"
     try:
         await callback.message.edit_text(text, reply_markup=kb.shop_buttons())
     except Exception:
@@ -108,7 +117,9 @@ async def show_top(callback: types.CallbackQuery):
     top_list = await db.get_top_users()
     text = "🏆 Top-10 Foydalanuvchilar:\n\n"
     for i, u in enumerate(top_list, 1):
-        text += f"{i}. {u['full_name']} - {u['points']} 🪙\n"
+        name = u.get('full_name', 'Noma'lum')
+        p = u.get('points', 0)
+        text += f"{i}. {name} - {p} 🪙\n"
     
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="🔙 Orqaga", callback_data="settings"))
@@ -138,14 +149,13 @@ async def fav_pagination(callback: types.CallbackQuery):
     builder = InlineKeyboardBuilder()
     for item in favs[start:end]:
         anime_id = str(item.get('anime_id', '0'))
-        builder.row(InlineKeyboardButton(text=f"🎬 {item['anime_name']}", callback_data=f"info_{anime_id}"))
+        anime_name = item.get('anime_name', 'Noma'lum')
+        builder.row(InlineKeyboardButton(text=f"🎬 {anime_name}", callback_data=f"info_{anime_id}"))
     
     nav = []
     if page > 1:
         nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"fav_{page-1}"))
-    
     nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="none"))
-    
     if page < total_pages:
         nav.append(InlineKeyboardButton(text="➡️", callback_data=f"fav_{page+1}"))
     
@@ -177,7 +187,6 @@ async def referral_handler(callback: types.CallbackQuery):
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    # Konfliktlarni oldini olish
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
@@ -186,4 +195,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logging.info("Bot to'xtatildi")
-    
