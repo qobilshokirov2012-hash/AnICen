@@ -20,6 +20,7 @@ def get_main_menu():
 
 def profile_buttons():
     builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="🔑 ADK Sozlamalari", callback_data="adk_menu"))
     builder.row(InlineKeyboardButton(text="🛒 Do'kon", callback_data="shop"),
                 InlineKeyboardButton(text="👥 Taklif qilish", callback_data="referral"))
     builder.row(InlineKeyboardButton(text="📊 Reyting", callback_data="leaderboard"),
@@ -29,6 +30,13 @@ def profile_buttons():
 def shop_buttons():
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="🚫 Reklamasiz (200 🪙)", callback_data="buy_no_ads"))
+    builder.row(InlineKeyboardButton(text="🔙 Profilga", callback_data="settings"))
+    return builder.as_markup()
+
+def adk_menu_buttons():
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="🆕 Yangi ADK yaratish", callback_data="generate_adk"))
+    builder.row(InlineKeyboardButton(text="ℹ️ ADK nima?", callback_data="what_is_adk"))
     builder.row(InlineKeyboardButton(text="🔙 Profilga", callback_data="settings"))
     return builder.as_markup()
     
