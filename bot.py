@@ -1,181 +1,121 @@
-import os
-import re
-import requests
-from aiogram import Bot, Dispatcher, types
-from aiogram.utils import executor
-from database import *
-from keyboards import main_menu
+import asyncio
+import random
+import logging
+import sys
+from os import getenv
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import CommandStart
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from motor.motor_asyncio import AsyncIOMotorClient
+
+# --- KONFIGURATSIYA ---
+BOT_TOKEN = "SIZNING_BOT_TOKENINGIZ" # Yoki getenv("BOT_TOKEN")
+MONGO_URL = "SIZNING_MONGO_URLINGIZ" # Yoki getenv("MONGO_URL")
+ADMIN_ID = 12345678 # Yoki int(getenv("ADMIN_ID"))
+
+# --- DATABASE SOZLAMALARI ---
+client = AsyncIOMotorClient(MONGO_URL)
+db = client['anime_bot_db']
+users_collection = db['users']
+
+logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
-# ================= START =================
-@dp.message_handler(commands=['start'])
-async def start(msg: types.Message):
-    user = get_user(msg.from_user.id)
+# --- FUNKSIYALAR ---
+def generate_adk():
+    """8 talik random ADK yaratish"""
+    digits = "".join([str(random.randint(0, 9)) for _ in range(8)])
+    return f"AnICen/{digits}/bot"
 
-    if not user:
-        create_user({
-            "user_id": msg.from_user.id,
-            "name": msg.from_user.first_name,
-            "username": msg.from_user.username,
-            "adk": None,
+async def get_user_rank(points):
+    """Ballarga qarab unvon berish"""
+    if points >= 10000: return "Anime Afsonasi 👑"
+    if points >= 5000: return "Hokage 🔥"
+    if points >= 2000: return "Shinobi ⚔️"
+    if points >= 500: return "Naruto"
+    return "Yangi boshlovchi 🌱"
+
+def main_menu_keyboard():
+    """Asosiy menyu tugmalari"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(text="🔍 Anime qidirish", callback_data="search"),
+        types.InlineKeyboardButton(text="📂 Janrlar", callback_data="genres")
+    )
+    builder.row(
+        types.InlineKeyboardButton(text="⭐ Tanlanganlar", callback_data="favs"),
+        types.InlineKeyboardButton(text="🎲 Tasodifiy anime", callback_data="random")
+    )
+    builder.row(
+        types.InlineKeyboardButton(text="🏆 Top-100", callback_data="top100"),
+        types.InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings")
+    )
+    return builder.as_markup()
+
+# --- HANDLERLAR ---
+@dp.message(CommandStart())
+async def command_start_handler(message: types.Message):
+    user_id = message.from_user.id
+    user_data = await users_collection.find_one({"user_id": user_id})
+
+    if not user_data:
+        # Birinchi marta kirgan foydalanuvchi
+        new_adk = generate_adk()
+        await users_collection.insert_one({
+            "user_id": user_id,
+            "username": message.from_user.username,
+            "points": 0,
+            "adk": new_adk,
             "favorites": [],
-            "created_at": msg.date
+            "history": []
         })
-
-        text = f"""Salom, {msg.from_user.first_name}! 👋
-
-Dunyodagi eng qiziqarli animelar olamiga xush kelibsiz! Bu yerda siz:
-
-🔍 Izlash — Sevimli animengizni topishingiz  
-⭐ Tanlanganlar — O'zingizga yoqqanlarini saqlashingiz  
-🎲 Tasodifiy — Nima ko'rishni bilmayotgan bo'lsangiz, tavsiyalar olishingiz mumkin  
-
-Pastdagi tugmalardan birini tanlang:
-"""
+        
+        text = (f"Salom, {message.from_user.full_name}! 👋\n"
+                f"Dunyodagi eng qiziqarli animelar olamiga xush kelibsiz!\n\n"
+                f"🔍 Izlash — Sevimli animengizni topishingiz;\n"
+                f"⭐ Tanlanganlar — O'zingizga yoqqanlarini saqlashingiz;\n"
+                f"🎲 Tasodifiy — Tavsiyalar olishingiz mumkin.\n\n"
+                f"Pastdagi tugmalardan birini tanlang:")
+        
+        builder = InlineKeyboardBuilder()
+        builder.row(types.InlineKeyboardButton(text="🆕 ADK YARATISH", callback_data="gen_adk"))
+        builder.row(types.InlineKeyboardButton(text="🔑 MENDA ADK BOR", callback_data="have_adk"))
+        
+        await message.answer(text, reply_markup=builder.as_markup())
     else:
-        adk = user.get("adk") or "yo‘q"
+        # Qayta kirgan foydalanuvchi
+        points = user_data.get("points", 0)
+        rank = await get_user_rank(points)
+        adk = user_data.get("adk")
+        
+        text = (f"Sizni yana koʻrganimizdan xursandmiz! {message.from_user.first_name} 👋\n\n"
+                f"🆔: {user_id}\n"
+                f"🎖 Unvon: {rank}\n"
+                f"💰 Ballar: {points}\n"
+                f"🔑 ADK: `{adk}`\n\n"
+                f"Bugun nima koʻramiz? Davom etish uchun menyudan tanlang:")
+        
+        await message.answer(text, reply_markup=main_menu_keyboard(), parse_mode="Markdown")
 
-        text = f"""Sizni yana koʻrganimizdan xursandmiz! {msg.from_user.first_name} 👋
-
-🆔 ID: {msg.from_user.id}  
-🔑 ADK: {adk}
-
-Bugun nima koʻramiz? Tanlanganlar roʻyxatingizda yangi qismlar yoki siz kutgan animelar chiqib qolgan boʻlishi mumkin!
-
-Davom etish uchun menyudan kerakli boʻlimni tanlang:
-"""
-
-    await msg.answer(text, reply_markup=main_menu())
-
-# ================= SEARCH =================
-@dp.callback_query_handler(lambda c: c.data == "search")
-async def search_btn(call: types.CallbackQuery):
-    await call.message.answer("🔍 Anime nomini yozing:")
-
-@dp.message_handler()
-async def search(msg: types.Message):
-    query = msg.text
-
-    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"
-    res = requests.get(url).json()
-
-    if not res["data"]:
-        await msg.answer("❌ Anime topilmadi")
-        return
-
-    anime = res["data"][0]
-
-    caption = f"""🎬 {anime['title']}
-⭐ {anime['score']}
-📅 {anime.get('year', 'Nomaʼlum')}
-
-📖 {anime['synopsis'][:200]}...
-"""
-
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("⭐ Saqlash", callback_data=f"fav_{anime['title']}"))
-
-    await bot.send_photo(
-        msg.chat.id,
-        anime["images"]["jpg"]["image_url"],
-        caption=caption,
-        reply_markup=kb
+@dp.callback_query(F.data == "gen_adk")
+async def generate_adk_callback(callback: types.CallbackQuery):
+    user_data = await users_collection.find_one({"user_id": callback.from_user.id})
+    await callback.message.edit_text(
+        f"Sizning shaxsiy ADK kodingiz yaratildi:\n\n`{user_data['adk']}`\n\n"
+        "Ushbu kodni saqlab qo'ying, u hisobingizni tiklashga yordam beradi.",
+        reply_markup=main_menu_keyboard(),
+        parse_mode="Markdown"
     )
 
-# ================= FAVORITES =================
-@dp.callback_query_handler(lambda c: c.data.startswith("fav_"))
-async def add_fav(call: types.CallbackQuery):
-    title = call.data.split("_", 1)[1]
+# --- BOTNI ISHGA TUSHIRISH ---
+async def main():
+    # TelegramConflictError oldini olish uchun drop_pending_updates=True
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
-    add_favorite(call.from_user.id, {"title": title})
-
-    await call.answer("⭐ Saqlandi!")
-
-@dp.callback_query_handler(lambda c: c.data == "favorites")
-async def show_fav(call: types.CallbackQuery):
-    favs = get_favorites(call.from_user.id)
-
-    if not favs:
-        await call.message.answer("❌ Tanlanganlar bo‘sh")
-        return
-
-    text = "⭐ Tanlanganlar:\n\n"
-    for f in favs[:5]:
-        text += f"• {f['title']}\n"
-
-    await call.message.answer(text)
-
-# ================= ADK =================
-user_states = {}
-
-@dp.callback_query_handler(lambda c: c.data == "create_adk")
-async def create_adk(call: types.CallbackQuery):
-    user_states[call.from_user.id] = "waiting_adk"
-    await call.message.answer("8 ta raqam kiriting:")
-
-@dp.message_handler(lambda msg: user_states.get(msg.from_user.id) == "waiting_adk")
-async def save_adk(msg: types.Message):
-    code = msg.text
-
-    if not re.fullmatch(r"\d{8}", code):
-        await msg.answer("❌ Faqat 8 ta raqam!")
-        return
-
-    adk = f"AnICen/{code}/bot"
-
-    # unique check
-    if users.find_one({"adk": adk}):
-        await msg.answer("❌ Bu ADK band!")
-        return
-
-    update_user(msg.from_user.id, {"adk": adk})
-    user_states.pop(msg.from_user.id)
-
-    await msg.answer(f"✅ ADK yaratildi:\n{adk}")
-
-@dp.callback_query_handler(lambda c: c.data == "have_adk")
-async def have_adk(call: types.CallbackQuery):
-    user_states[call.from_user.id] = "check_adk"
-    await call.message.answer("ADK kiriting:")
-
-@dp.message_handler(lambda msg: user_states.get(msg.from_user.id) == "check_adk")
-async def check_adk(msg: types.Message):
-    adk = msg.text
-
-    if not users.find_one({"adk": adk}):
-        await msg.answer("❌ ADK topilmadi")
-        return
-
-    update_user(msg.from_user.id, {"adk": adk})
-    user_states.pop(msg.from_user.id)
-
-    await msg.answer("✅ ADK tasdiqlandi")
-
-# ================= ADMIN UPLOAD =================
-@dp.message_handler(commands=['upload'])
-async def upload(msg: types.Message):
-    if msg.from_user.id != ADMIN_ID:
-        return
-
-    # oddiy test
-    title = "Naruto"
-
-    users_list = find_users_with_favorite(title)
-
-    for u in users_list:
-        try:
-            await bot.send_message(
-                u["user_id"],
-                f"🚀 Siz kutgan \"{title}\"ning yangi qismi yuklandi!"
-            )
-        except:
-            pass
-
-# ================= RUN =================
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(main())
+    
