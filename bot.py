@@ -20,24 +20,45 @@ async def start_handler(message: types.Message):
     user_id = message.from_user.id
     full_name = message.from_user.full_name
     username = message.from_user.username
+    
+    # Referal tizimi
+    args = message.text.split()
+    if len(args) > 1 and args[1].isdigit():
+        referrer_id = int(args[1])
+        if referrer_id != user_id:
+            await db.update_points(referrer_id, 50)
+            try:
+                await bot.send_message(referrer_id, "🎉 Taklifingiz uchun +50 ball berildi!")
+            except:
+                pass
 
-    # MongoDB'ga foydalanuvchini qo'shish (asinxron)
-    await db.add_user(user_id, username, full_name)
     user_data = await db.get_user(user_id)
-
-    # Agar foydalanuvchi yangi bo'lsa (joined_date bugun bo'lsa)
-    # Eslatma: joined_date mantiqini biroz soddalashtirdik
-    text = (
-        f"Salom, {full_name}! 👋\n"
-        f"Dunyodagi eng qiziqarli animelar olamiga xush kelibsiz!\n"
-        f"🆔 ID: {user_id}\n"
-        f"🔑 ADK: {user_data.get('adk_id')}\n\n"
-        f"Pastdagi tugmalardan birini tanlang:"
-    )
-    await message.answer(text, reply_markup=kb.get_start_buttons())
+    if not user_data:
+        await db.add_user(user_id, username, full_name)
+        welcome_text = (
+            f"Salom, {full_name}! 👋\n"
+            f"Dunyodagi eng qiziqarli animelar olamiga xush kelibsiz! Bu yerda siz:\n"
+            f"🔍 Izlash — Sevimli animengizni topishingiz;\n"
+            f"⭐ Tanlanganlar — O'zingizga yoqqanlarini saqlashingiz;\n"
+            f"🎲 Tasodifiy — Nima ko'rishni bilmayotgan bo'lsangiz, tavsiyalar olishingiz mumkin.\n"
+            f"Pastdagi tugmalardan birini tanlang:"
+        )
+        await message.answer(welcome_text, reply_markup=kb.get_start_buttons())
+    else:
+        # Kunlik kirish balli
+        await db.update_points(user_id, 10)
+        re_text = (
+            f"Sizni yana koʻrganimizdan xursandmiz! {full_name}👋\n"
+            f"ID: {user_id}\n"
+            f"ADK: {user_data.get('adk_id')}\n\n"
+            f"Bugun nima koʻramiz? Tanlanganlar roʻyxatingizda yangi qismlar chiqib qolgan boʻlishi mumkin!\n"
+            f"Davom etish uchun menyudan kerakli boʻlimni tanlang:"
+        )
+        await message.answer(re_text, reply_markup=kb.get_main_menu())
 
 @dp.callback_query(F.data == "settings")
-async def profile_callback(callback: types.CallbackQuery):
+async def profile_handler(callback: types.CallbackQuery):
+    await callback.answer()
     user = await db.get_user(callback.from_user.id)
     profile_text = (
         f"👤 Foydalanuvchi Profili\n\n"
@@ -49,48 +70,88 @@ async def profile_callback(callback: types.CallbackQuery):
     )
     await callback.message.edit_text(profile_text, reply_markup=kb.profile_buttons())
 
+@dp.callback_query(F.data == "back_to_main")
+async def back_main(callback: types.CallbackQuery):
+    await callback.answer()
+    await callback.message.edit_text("Asosiy menyu:", reply_markup=kb.get_main_menu())
+
+@dp.callback_query(F.data == "shop")
+async def shop_menu(callback: types.CallbackQuery):
+    await callback.answer()
+    user = await db.get_user(callback.from_user.id)
+    text = f"🛒 Do'kon\nBalingiz: {user['points']} 🪙\n\nSotib olish uchun tugmani bosing:"
+    await callback.message.edit_text(text, reply_markup=kb.shop_buttons())
+
+# (DAVOMI KEYINGI XABARDA...)
+@dp.callback_query(F.data == "buy_no_ads")
+async def buy_ads(callback: types.CallbackQuery):
+    success = await db.spend_points(callback.from_user.id, 200, "no_ads")
+    if success:
+        await callback.answer("✅ Reklamasiz rejim faollashdi!", show_alert=True)
+        await shop_menu(callback)
+    else:
+        await callback.answer("❌ Ballar yetarli emas!", show_alert=True)
+
+@dp.callback_query(F.data == "leaderboard")
+async def show_top(callback: types.CallbackQuery):
+    await callback.answer()
+    top_list = await db.get_top_users()
+    text = "🏆 Top-10 Foydalanuvchilar:\n\n"
+    for i, u in enumerate(top_list, 1):
+        text += f"{i}. {u['full_name']} - {u['points']} 🪙\n"
+    
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="🔙 Orqaga", callback_data="settings"))
+    await callback.message.edit_text(text, reply_markup=builder.as_markup())
+
 @dp.callback_query(F.data.startswith("fav_"))
-async def favorites_page(callback: types.CallbackQuery):
+async def fav_pagination(callback: types.CallbackQuery):
+    await callback.answer()
     page = int(callback.data.split("_")[1])
     favs = await db.get_favorites(callback.from_user.id)
     
     if not favs:
-        await callback.answer("Sizda hali tanlangan animelar yo'q!", show_alert=True)
+        await callback.message.edit_text("⭐ Tanlanganlar bo'sh!", reply_markup=kb.get_main_menu())
         return
 
-    items_per_page = 5
-    total_pages = (len(favs) + items_per_page - 1) // items_per_page
-    start = (page - 1) * items_per_page
-    end = start + items_per_page
-    current_items = favs[start:end]
-
+    limit = 5
+    total_pages = (len(favs) + limit - 1) // limit
+    start = (page - 1) * limit
+    end = start + limit
+    
     builder = InlineKeyboardBuilder()
-    for item in current_items:
-        builder.row(InlineKeyboardButton(text=f"🎬 {item['anime_name']}", callback_data=f"view_{item['anime_id']}"))
-
+    for item in favs[start:end]:
+        builder.row(InlineKeyboardButton(text=f"🎬 {item['anime_name']}", callback_data=f"info_{item['anime_id']}"))
+    
     nav = []
-    if page > 1:
-        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"fav_{page-1}"))
+    if page > 1: nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"fav_{page-1}"))
     nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="none"))
-    if page < total_pages:
-        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"fav_{page+1}"))
+    if page < total_pages: nav.append(InlineKeyboardButton(text="➡️", callback_data=f"fav_{page+1}"))
     
     builder.row(*nav)
     builder.row(InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_to_main"))
-    
-    await callback.message.edit_text("⭐ Tanlangan animelar ro'yxati:", reply_markup=builder.as_markup())
+    await callback.message.edit_text("⭐ Tanlangan animelar:", reply_markup=builder.as_markup())
 
-@dp.callback_query(F.data == "back_to_main")
-async def back_to_main_handler(callback: types.CallbackQuery):
-    await callback.message.edit_text("Asosiy menyu:", reply_markup=kb.get_main_menu())
+@dp.callback_query(F.data == "referral")
+async def referral_handler(callback: types.CallbackQuery):
+    await callback.answer()
+    bot_info = await bot.get_me()
+    ref_link = f"https://t.me/{bot_info.username}?start={callback.from_user.id}"
+    text = (
+        f"👥 Do'stlarni taklif qiling va ball ishlang!\n\n"
+        f"Sizning havolangiz:\n`{ref_link}`\n\n"
+        f"Har bir do'stingiz uchun +50 ball beriladi."
+    )
+    await callback.message.answer(text, parse_mode="Markdown")
 
-# Railway serveri uchun ishga tushirish funksiyasi
 async def main():
     logging.basicConfig(level=logging.INFO)
-    # Konfliktlarning oldini olish (Eski sessiyalarni tozalash)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Bot to'xtatildi")
     
