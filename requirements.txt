@@ -1,4 +1,4 @@
-aiogram==2.25.1
+aiogram
+motor
 pymongo
-python-dotenv
-requests
+certifi
