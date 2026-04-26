@@ -15,6 +15,8 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# --- HANDLERLAR BOSHLANISHI ---
+
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     user_id = message.from_user.id
@@ -49,9 +51,9 @@ async def start_handler(message: types.Message):
         await db.update_points(user_id, 10)
         re_text = (
             f"Sizni yana koʻrganimizdan xursandmiz! {full_name}👋\n"
-            f"ID: {user_id}\n"
-            f"ADK: {user_data.get('adk_id')}\n\n"
-            f"Bugun nima koʻramiz? Tanlanganlar roʻyxatingizda yangi qismlar chiqib qolgan boʻlishi mumkin!\n"
+            f"🆔 ID: {user_id}\n"
+            f"🔑 ADK: {user_data.get('adk_id')}\n\n"
+            f"Bugun nima koʻramiz? Tanlanganlar roʻyxatingizda yangi qismlar chiqib qolgan boʻlishi mumkin!\n\n"
             f"Davom etish uchun menyudan kerakli boʻlimni tanlang:"
         )
         await message.answer(re_text, reply_markup=kb.get_main_menu())
@@ -62,27 +64,35 @@ async def profile_handler(callback: types.CallbackQuery):
     user = await db.get_user(callback.from_user.id)
     profile_text = (
         f"👤 Foydalanuvchi Profili\n\n"
-        f"Ism: {user['full_name']}\n"
-        f"Daraja: {user['level']}\n"
-        f"Jami ballar: {user['points']} 🪙\n"
-        f"Ko‘rilgan animelar: {user['watched_count']} ta\n"
-        f"ADK: {user['adk_id']}"
+        f"👤 Ism: {user['full_name']}\n"
+        f"🎖 Daraja: {user['level']}\n"
+        f"🪙 Jami ballar: {user['points']} 🪙\n"
+        f"🎬 Ko‘rilgan animelar: {user['watched_count']} ta\n"
+        f"🔑 ADK: {user['adk_id']}"
     )
-    await callback.message.edit_text(profile_text, reply_markup=kb.profile_buttons())
+    try:
+        await callback.message.edit_text(profile_text, reply_markup=kb.profile_buttons())
+    except Exception:
+        pass
 
 @dp.callback_query(F.data == "back_to_main")
 async def back_main(callback: types.CallbackQuery):
     await callback.answer()
-    await callback.message.edit_text("Asosiy menyu:", reply_markup=kb.get_main_menu())
+    try:
+        await callback.message.edit_text("Asosiy menyu:", reply_markup=kb.get_main_menu())
+    except Exception:
+        pass
 
 @dp.callback_query(F.data == "shop")
 async def shop_menu(callback: types.CallbackQuery):
     await callback.answer()
     user = await db.get_user(callback.from_user.id)
     text = f"🛒 Do'kon\nBalingiz: {user['points']} 🪙\n\nSotib olish uchun tugmani bosing:"
-    await callback.message.edit_text(text, reply_markup=kb.shop_buttons())
+    try:
+        await callback.message.edit_text(text, reply_markup=kb.shop_buttons())
+    except Exception:
+        pass
 
-# (DAVOMI KEYINGI XABARDA...)
 @dp.callback_query(F.data == "buy_no_ads")
 async def buy_ads(callback: types.CallbackQuery):
     success = await db.spend_points(callback.from_user.id, 200, "no_ads")
@@ -102,7 +112,10 @@ async def show_top(callback: types.CallbackQuery):
     
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="🔙 Orqaga", callback_data="settings"))
-    await callback.message.edit_text(text, reply_markup=builder.as_markup())
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup())
+    except Exception:
+        pass
 
 @dp.callback_query(F.data.startswith("fav_"))
 async def fav_pagination(callback: types.CallbackQuery):
@@ -111,7 +124,10 @@ async def fav_pagination(callback: types.CallbackQuery):
     favs = await db.get_favorites(callback.from_user.id)
     
     if not favs:
-        await callback.message.edit_text("⭐ Tanlanganlar bo'sh!", reply_markup=kb.get_main_menu())
+        try:
+            await callback.message.edit_text("⭐ Tanlanganlar ro'yxati bo'sh!", reply_markup=kb.get_main_menu())
+        except Exception:
+            pass
         return
 
     limit = 5
@@ -121,16 +137,29 @@ async def fav_pagination(callback: types.CallbackQuery):
     
     builder = InlineKeyboardBuilder()
     for item in favs[start:end]:
-        builder.row(InlineKeyboardButton(text=f"🎬 {item['anime_name']}", callback_data=f"info_{item['anime_id']}"))
+        anime_id = str(item.get('anime_id', '0'))
+        builder.row(InlineKeyboardButton(text=f"🎬 {item['anime_name']}", callback_data=f"info_{anime_id}"))
     
     nav = []
-    if page > 1: nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"fav_{page-1}"))
+    if page > 1:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"fav_{page-1}"))
+    
     nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="none"))
-    if page < total_pages: nav.append(InlineKeyboardButton(text="➡️", callback_data=f"fav_{page+1}"))
+    
+    if page < total_pages:
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"fav_{page+1}"))
     
     builder.row(*nav)
     builder.row(InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_to_main"))
-    await callback.message.edit_text("⭐ Tanlangan animelar:", reply_markup=builder.as_markup())
+    
+    try:
+        await callback.message.edit_text("⭐ Tanlangan animelar ro'yxati:", reply_markup=builder.as_markup())
+    except Exception:
+        pass
+
+@dp.callback_query(F.data == "none")
+async def empty_callback(callback: types.CallbackQuery):
+    await callback.answer()
 
 @dp.callback_query(F.data == "referral")
 async def referral_handler(callback: types.CallbackQuery):
@@ -144,8 +173,11 @@ async def referral_handler(callback: types.CallbackQuery):
     )
     await callback.message.answer(text, parse_mode="Markdown")
 
+# --- ASOSIY ISHGA TUSHIRISH QISMI ---
+
 async def main():
     logging.basicConfig(level=logging.INFO)
+    # Konfliktlarni oldini olish
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
