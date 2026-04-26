@@ -1,7 +1,7 @@
 import asyncio
 import random
 import logging
-import sys
+import os
 from os import getenv
 
 from aiogram import Bot, Dispatcher, types, F
@@ -9,10 +9,15 @@ from aiogram.filters import CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# --- KONFIGURATSIYA ---
-BOT_TOKEN = "SIZNING_BOT_TOKENINGIZ" # Yoki getenv("BOT_TOKEN")
-MONGO_URL = "SIZNING_MONGO_URLINGIZ" # Yoki getenv("MONGO_URL")
-ADMIN_ID = 12345678 # Yoki int(getenv("ADMIN_ID"))
+# --- KONFIGURATSIYA (Railway Variables bo'limidan oladi) ---
+BOT_TOKEN = getenv("BOT_TOKEN")
+MONGO_URL = getenv("MONGO_URL")
+# Admin ID raqam bo'lishi kerak, default 0
+ADMIN_ID = int(getenv("ADMIN_ID", 0))
+
+# Token mavjudligini tekshiramiz (Xatolikni aniqlash uchun)
+if not BOT_TOKEN:
+    raise ValueError("XATO: BOT_TOKEN muhit o'zgaruvchisi topilmadi. Railway 'Variables' bo'limini tekshiring!")
 
 # --- DATABASE SOZLAMALARI ---
 client = AsyncIOMotorClient(MONGO_URL)
@@ -67,6 +72,7 @@ async def command_start_handler(message: types.Message):
         await users_collection.insert_one({
             "user_id": user_id,
             "username": message.from_user.username,
+            "full_name": message.from_user.full_name,
             "points": 0,
             "adk": new_adk,
             "favorites": [],
@@ -92,11 +98,10 @@ async def command_start_handler(message: types.Message):
         adk = user_data.get("adk")
         
         text = (f"Sizni yana koʻrganimizdan xursandmiz! {message.from_user.first_name} 👋\n\n"
-                f"🆔: {user_id}\n"
-                f"🎖 Unvon: {rank}\n"
-                f"💰 Ballar: {points}\n"
-                f"🔑 ADK: `{adk}`\n\n"
-                f"Bugun nima koʻramiz? Davom etish uchun menyudan tanlang:")
+                f"🆔: `{user_id}`\n"
+                f"ADK: `{adk}`\n\n"
+                f"Bugun nima koʻramiz? Tanlanganlar roʻyxatingizda yangi qismlar chiqib qolgan boʻlishi mumkin!\n\n"
+                f"Davom etish uchun menyudan kerakli boʻlimni tanlang:")
         
         await message.answer(text, reply_markup=main_menu_keyboard(), parse_mode="Markdown")
 
@@ -112,10 +117,10 @@ async def generate_adk_callback(callback: types.CallbackQuery):
 
 # --- BOTNI ISHGA TUSHIRISH ---
 async def main():
-    # TelegramConflictError oldini olish uchun drop_pending_updates=True
+    # Konfliktni oldini olish uchun drop_pending_updates=True
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
+        
