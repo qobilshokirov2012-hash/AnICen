@@ -2,7 +2,6 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 
-# Railway Environment Variables orqali ulanish
 MONGO_URL = os.getenv("MONGO_URL")
 
 class Database:
@@ -11,7 +10,6 @@ class Database:
         self.db = self.client.anime_bot_db
         self.users = self.db.users
         self.favorites = self.db.favorites
-        self.watched = self.db.watched
 
     async def add_user(self, user_id, username, full_name):
         adk_id = f"ADK-{user_id}"
@@ -25,8 +23,7 @@ class Database:
             "watched_count": 0,
             "adk_id": adk_id,
             "joined_date": date_now,
-            "no_ads": False,
-            "custom_font": None
+            "no_ads": False
         }
         await self.users.update_one(
             {"user_id": user_id},
@@ -50,27 +47,20 @@ class Database:
             update_data = {"$inc": {"points": -amount}}
             if service_name == "no_ads":
                 update_data["$set"] = {"no_ads": True}
-            
             await self.users.update_one({"user_id": user_id}, update_data)
             return True
         return False
 
     async def check_level(self, user_id):
         user = await self.get_user(user_id)
-        if not user:
-            return
+        if not user: return
         p = user.get("points", 0)
-        
         level = "Yangi boshlovchi 🌱"
         if p >= 10000: level = "Anime Afsonasi 👑"
         elif p >= 5000: level = "Hokage 🔥"
         elif p >= 2000: level = "Shinobi ⚔️"
         elif p >= 500: level = "Naruto"
-        
-        await self.users.update_one(
-            {"user_id": user_id},
-            {"$set": {"level": level}}
-        )
+        await self.users.update_one({"user_id": user_id}, {"$set": {"level": level}})
 
     async def get_favorites(self, user_id):
         cursor = self.favorites.find({"user_id": user_id})
