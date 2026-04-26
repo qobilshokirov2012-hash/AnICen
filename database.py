@@ -53,13 +53,20 @@ class Database:
 
     async def check_level(self, user_id):
         user = await self.get_user(user_id)
-        if not user: return
+        if not user: 
+            return
         p = user.get("points", 0)
+        
         level = "Yangi boshlovchi 🌱"
-        if p >= 10000: level = "Anime Afsonasi 👑"
-        elif p >= 5000: level = "Hokage 🔥"
-        elif p >= 2000: level = "Shinobi ⚔️"
-        elif p >= 500: level = "Naruto"
+        if p >= 10000: 
+            level = "Anime Afsonasi 👑"
+        elif p >= 5000: 
+            level = "Hokage 🔥"
+        elif p >= 2000: 
+            level = "Shinobi ⚔️"
+        elif p >= 500: 
+            level = "Naruto"
+        
         await self.users.update_one({"user_id": user_id}, {"$set": {"level": level}})
 
     async def get_favorites(self, user_id):
