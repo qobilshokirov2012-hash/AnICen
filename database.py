@@ -2,13 +2,11 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 
-# Railway'dagi muhit o'zgaruvchilarini olish
 MONGO_URL = os.getenv("MONGO_URL")
 
 class Database:
     def __init__(self):
         self.client = AsyncIOMotorClient(MONGO_URL)
-        # Baza nomi 'anime_bot_db' deb nomlanadi
         self.db = self.client.anime_bot_db
         self.users = self.db.users
         self.favorites = self.db.favorites
@@ -25,9 +23,9 @@ class Database:
             "watched_count": 0,
             "adk_id": adk_id,
             "joined_date": date_now,
-            "history": []
+            "no_ads": False,      # Reklamasiz rejim
+            "custom_font": None   # Profil bezagi
         }
-        # Agar foydalanuvchi bazada bo'lmasa, qo'shish
         await self.users.update_one(
             {"user_id": user_id},
             {"$setOnInsert": user_data},
@@ -37,6 +35,7 @@ class Database:
     async def get_user(self, user_id):
         return await self.users.find_one({"user_id": user_id})
 
+    # --- BALLARNI BOSHQARISH ---
     async def update_points(self, user_id, amount):
         await self.users.update_one(
             {"user_id": user_id},
@@ -44,24 +43,37 @@ class Database:
         )
         await self.check_level(user_id)
 
+    async def spend_points(self, user_id, amount, service_name):
+        user = await self.get_user(user_id)
+        if user['points'] >= amount:
+            await self.users.update_one(
+                {"user_id": user_id},
+                {"$inc": {"points": -amount}}
+            )
+            return True
+        return False
+
     async def check_level(self, user_id):
         user = await self.get_user(user_id)
-        points = user.get("points", 0)
+        p = user.get("points", 0)
         
+        # Siz aytgan darajalar tizimi
         level = "Yangi boshlovchi 🌱"
-        if points >= 10000: level = "Anime Afsonasi 👑"
-        elif points >= 5000: level = "Hokage 🔥"
-        elif points >= 2000: level = "Shinobi ⚔️"
-        elif points >= 500: level = "Naruto"
+        if p >= 10000: level = "Anime Afsonasi 👑"
+        elif p >= 5000: level = "Hokage 🔥"
+        elif p >= 2000: level = "Shinobi ⚔️"
+        elif p >= 500: level = "Naruto"
         
         await self.users.update_one(
             {"user_id": user_id},
             {"$set": {"level": level}}
         )
 
-    async def get_favorites(self, user_id):
-        # Foydalanuvchining tanlanganlarini ro'yxat shaklida olish
-        cursor = self.favorites.find({"user_id": user_id})
-        return await cursor.to_list(length=100)
+    # --- TOP REYTING ---
+    async def get_top_users(self):
+        # Eng ko'p ball to'plagan 10 kishi
+        cursor = self.users.find().sort("points", -1).limit(10)
+        return await cursor.to_list(length=10)
 
 db = Database()
+        
