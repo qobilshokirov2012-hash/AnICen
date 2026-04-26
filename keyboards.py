@@ -1,42 +1,39 @@
-from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram import types
 
-def get_start_buttons():
+def main_menu_keyboard():
+    """Asosiy menyu tugmalari"""
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="🔍 Anime qidirish", callback_data="search"),
-                InlineKeyboardButton(text="📂 Janrlar", callback_data="genres"))
-    builder.row(InlineKeyboardButton(text="⭐ Tanlanganlar", callback_data="fav_1"),
-                InlineKeyboardButton(text="🎲 Tasodifiy anime", callback_data="random"))
-    builder.row(InlineKeyboardButton(text="🏆 Top-100", callback_data="top_100"),
-                InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings"))
+    builder.row(
+        types.InlineKeyboardButton(text="🔍 Anime qidirish", callback_data="search"),
+        types.InlineKeyboardButton(text="📂 Janrlar", callback_data="genres")
+    )
+    builder.row(
+        types.InlineKeyboardButton(text="⭐ Tanlanganlar", callback_data="favs"),
+        types.InlineKeyboardButton(text="🎲 Tasodifiy anime", callback_data="random")
+    )
+    builder.row(
+        types.InlineKeyboardButton(text="🏆 Top-100", callback_data="top100"),
+        types.InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings")
+    )
+    builder.row(
+        types.InlineKeyboardButton(text="👤 Profil", callback_data="profile"),
+        types.InlineKeyboardButton(text="📅 Kunlik ball", callback_data="daily_bonus")
+    )
     return builder.as_markup()
 
-def get_main_menu():
+def profile_keyboard():
+    """Profil ichidagi tugmalar"""
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="🔍 Qidirish", callback_data="search"),
-                InlineKeyboardButton(text="⭐ Tanlanganlar", callback_data="fav_1"))
-    builder.row(InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings"))
+    builder.row(types.InlineKeyboardButton(text="🪙 Ballarni sarflash", callback_data="spend"))
+    builder.row(types.InlineKeyboardButton(text="👥 Do'stlarni taklif qilish", callback_data="referral"))
+    builder.row(types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_main"))
     return builder.as_markup()
 
-def profile_buttons():
+def start_registration_keyboard():
+    """Birinchi marta kirganda chiqadigan tugmalar"""
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="🔑 ADK Sozlamalari", callback_data="adk_menu"))
-    builder.row(InlineKeyboardButton(text="🛒 Do'kon", callback_data="shop"),
-                InlineKeyboardButton(text="👥 Taklif qilish", callback_data="referral"))
-    builder.row(InlineKeyboardButton(text="📊 Reyting", callback_data="leaderboard"),
-                InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_to_main"))
-    return builder.as_markup()
-
-def shop_buttons():
-    builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="🚫 Reklamasiz (200 🪙)", callback_data="buy_no_ads"))
-    builder.row(InlineKeyboardButton(text="🔙 Profilga", callback_data="settings"))
-    return builder.as_markup()
-
-def adk_menu_buttons():
-    builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="🆕 Yangi ADK yaratish", callback_data="generate_adk"))
-    builder.row(InlineKeyboardButton(text="ℹ️ ADK nima?", callback_data="what_is_adk"))
-    builder.row(InlineKeyboardButton(text="🔙 Profilga", callback_data="settings"))
+    builder.row(types.InlineKeyboardButton(text="🆕 ADK YARATISH", callback_data="gen_adk"))
+    builder.row(types.InlineKeyboardButton(text="🔑 MENDA ADK BOR", callback_data="have_adk"))
     return builder.as_markup()
     
