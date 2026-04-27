@@ -89,3 +89,29 @@ def back_to_main_keyboard():
     builder.row(types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_main"))
     return builder.as_markup()
     
+# Profil ichidagi "Do'kon" tugmasi
+def profile_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="🛒 Do‘kon", callback_data="open_shop"))
+    return builder.as_markup()
+
+# Do'kon menyusi
+def shop_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="⚔️ Kakashi (567 💴)", callback_data="buy_rank_kakashi"))
+    builder.row(types.InlineKeyboardButton(text="🌸 Sakura (600 💴)", callback_data="buy_rank_sakura"))
+    builder.row(types.InlineKeyboardButton(text="🗡 Sasuke (693 💴)", callback_data="buy_rank_sasuke"))
+    builder.row(types.InlineKeyboardButton(text="🍥 Naruto (787 💴)", callback_data="buy_rank_naruto"))
+    builder.row(
+        types.InlineKeyboardButton(text="Ryo haqida?", callback_data="about_ryo"),
+        types.InlineKeyboardButton(text="Daraja haqida?", callback_data="about_ranks")
+    )
+    builder.row(types.InlineKeyboardButton(text="❌ Orqaga", callback_data="back_to_profile"))
+    return builder.as_markup()
+
+# Faqat orqaga qaytish (Ryo/Daraja haqida bo'limidan do'konga)
+def back_to_shop_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="open_shop"))
+    return builder.as_markup()
+    
