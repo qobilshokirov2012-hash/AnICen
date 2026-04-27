@@ -23,7 +23,7 @@ users_collection = db['users']
 
 # 1. SOZLAMALAR ASOSIY MENYUSI
 @router.message(F.text == "⚙️ Sozlamalar")
-async def settings_main_handler(message: types.Message):
+async def settings_main_handler(event: types.Message | types.CallbackQuery):
     text = (
         f"<tg-emoji emoji-id='{EMOJIS['settings']}'>⚙️</tg-emoji> <b>Sozlamalar bo‘limi</b>\n\n"
         f"━━━━━━━━━━━━━━━\n"
@@ -34,7 +34,12 @@ async def settings_main_handler(message: types.Message):
         f"<tg-emoji emoji-id='{EMOJIS['cup']}'>🏆</tg-emoji> Yutuqlar\n"
         f"━━━━━━━━━━━━━━━"
     )
-    await message.answer(text, reply_markup=settings_inline_keyboard(), parse_mode=ParseMode.HTML)
+    
+    # Message yoki CallbackQuery ekanligini tekshirish
+    if isinstance(event, types.Message):
+        await event.answer(text, reply_markup=settings_inline_keyboard(), parse_mode=ParseMode.HTML)
+    else:
+        await event.message.edit_text(text, reply_markup=settings_inline_keyboard(), parse_mode=ParseMode.HTML)
 
 # 2. TILNI O'ZGARTIRISH MENYUSI
 @router.callback_query(F.data == "sett_lang")
@@ -108,6 +113,6 @@ async def settings_stats_page(callback: types.CallbackQuery):
 # 7. ORQAGA QAYTISH
 @router.callback_query(F.data == "back_to_settings")
 async def back_to_settings_logic(callback: types.CallbackQuery):
-    await settings_main_handler(callback.message)
-    await callback.message.delete()
-  
+    # Asosiy menyuni chaqiramiz va edit qilamiz
+    await settings_main_handler(callback)
+                               
