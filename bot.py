@@ -101,3 +101,80 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
         
+# --- SEVIMLILAR BO'LIMI (REPLY TUGMA) ---
+@dp.message(F.text == "🌟 Sevimlilar")
+async def favorites_handler(message: types.Message):
+    user_id = message.from_user.id
+    user_data = await users_collection.find_one({"user_id": user_id})
+    favs = user_data.get("favorites", [])
+    
+    # Ro'yxatni shakllantirish
+    if not favs:
+        fav_list = "Hozircha sevimlilar ro'yxatingiz bo'sh."
+    else:
+        fav_list = "\n".join([f"{i+1}. {name}" for i, name in enumerate(favs[:5])]) # Dastlabki 5tasi
+
+    text = (
+        f"<tg-emoji emoji-id='5258259534857645678'>🌟</tg-emoji> Sizning sevimli animelaringiz:\n\n"
+        f"{fav_list}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> <b>Sevimlilar (Favorites)</b>\n"
+        f"<tg-emoji emoji-id='5442875573045045415'>📄</tg-emoji> Sevimlilar — siz yoqtirgan animelarni saqlash va tez topish uchun bo‘lim.\n\n"
+        f"<tg-emoji emoji-id='5436010183786513326'>❓</tg-emoji> <b>Nima qiladi?</b>\n"
+        f"<tg-emoji emoji-id='5397916757333654639'>✅</tg-emoji> Sizga yoqqan animelarni saqlaydi\n"
+        f"<tg-emoji emoji-id='5336993488053477866'>🚀</tg-emoji> Keyin tez ochib ko‘rish imkonini beradi\n"
+        f"<tg-emoji emoji-id='5258514780469075716'>📂</tg-emoji> Barcha sevimlilar ro‘yxatini bir joyda jamlaydi\n\n"
+        f"<tg-emoji emoji-id='5456429416089410910'>🛠</tg-emoji> <b>Qanday ishlaydi?</b>\n"
+        f"• Anime sahifasida <tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> Sevimlilarga qo‘shish tugmasini bosing\n"
+        f"• Anime avtomatik sevimlilar ro‘yxatiga qo‘shiladi\n"
+        f"• Yana bosilsa → <tg-emoji emoji-id='5949785428843302949'>❌</tg-emoji> ro‘yxatdan olib tashlanadi\n\n"
+        f"<tg-emoji emoji-id='6035300138967112061'>📋</tg-emoji> <b>Sevimlilar menyusi</b>\n"
+        f"Bu yerda siz:\n"
+        f"<tg-emoji emoji-id='5258514780469075716'>📂</tg-emoji> Saqlangan animelarni ko‘rasiz\n"
+        f"<tg-emoji emoji-id='5336993488053477866'>🔍</tg-emoji> Har bir anime sahifasini ochasiz\n"
+        f"<tg-emoji emoji-id='5949785428843302949'>🗑</tg-emoji> Keraksizlarini olib tashlaysiz"
+    )
+
+    await message.answer(text, reply_markup=favorites_inline_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- OXIRGI QO'SHILGANLAR (1 KUNLIK NEW BELGISI BILAN) ---
+@dp.callback_query(F.data == "fav_recent")
+async def fav_recent_handler(callback: types.CallbackQuery):
+    # Bu yerda mantiqan oxirgi 24 soatda qo'shilganlar filtrlanadi
+    text = (
+        f"<tg-emoji emoji-id='5458526506886124915'>🆕</tg-emoji> <b>Yaqinda qo‘shilganlar:</b>\n"
+        f"— Naruto (new)\n"
+        f"— Boruto (new)"
+    )
+    await callback.message.edit_text(text, reply_markup=back_to_main_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- TOGGLE SYSTEM (QO'SHISH VA OLIB TASHLASH) ---
+@dp.callback_query(F.data.startswith("add_fav_"))
+async def add_to_favorites(callback: types.CallbackQuery):
+    anime_id = callback.data.split("_")[-1]
+    user_id = callback.from_user.id
+    
+    # Bazaga qo'shish (Misol: "Naruto")
+    await users_collection.update_one(
+        {"user_id": user_id},
+        {"$addToSet": {"favorites": "Naruto"}} # Bu yerda anime_id bo'yicha nom olinadi
+    )
+    
+    await callback.answer("✅ Sevimlilarga qo‘shildi!", show_alert=False)
+    # Tugmani o'zgartiramiz
+    await callback.message.edit_reply_markup(reply_markup=anime_item_keyboard(anime_id, is_favorite=True))
+
+@dp.callback_query(F.data.startswith("rem_fav_"))
+async def remove_from_favorites(callback: types.CallbackQuery):
+    anime_id = callback.data.split("_")[-1]
+    user_id = callback.from_user.id
+    
+    # Bazadan olib tashlash
+    await users_collection.update_one(
+        {"user_id": user_id},
+        {"$pull": {"favorites": "Naruto"}}
+    )
+    
+    await callback.answer("❌ Sevimlilardan olib tashlandi", show_alert=False)
+    # Tugmani qaytaramiz
+    await callback.message.edit_reply_markup(reply_markup=anime_item_keyboard(anime_id, is_favorite=False))
