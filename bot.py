@@ -11,14 +11,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 # Keyboards faylingizdan barcha kerakli funksiyalarni import qilamiz
 from keyboards import (
-    main_menu_keyboard, 
-    main_reply_keyboard, 
-    back_to_main_keyboard,
-    favorites_inline_keyboard,
-    back_to_fav_keyboard,  # Mana shu yangi qo'shildi
-    anime_item_keyboard,
+    # ... boshqa importlar
     profile_inline_keyboard,
-    spend_points_inline_keyboard
+    shop_inline_keyboard,
+    back_to_shop_keyboard,
+    main_reply_keyboard
 )
 
 from config import EMOJIS
