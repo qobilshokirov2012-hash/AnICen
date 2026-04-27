@@ -1,7 +1,7 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram import types
 
-# --- ASOSIY REPLY MENYU (Pastdagi knopkalar) ---
+# --- ASOSIY REPLY MENYU ---
 def main_reply_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.row(
@@ -18,6 +18,11 @@ def main_reply_keyboard():
     builder.row(
         types.KeyboardButton(text="👤 Profil"),
         types.KeyboardButton(text="⚙️ Sozlamalar")
+    )
+    # Do'kon va Bildirishnomalar yangi reply menyuda (Siz aytgandek)
+    builder.row(
+        types.KeyboardButton(text="🛒 Do‘kon"),
+        types.KeyboardButton(text="🔔 Bildirishnomalar")
     )
     return builder.as_markup(resize_keyboard=True)
 
@@ -130,13 +135,25 @@ def anime_prefs_keyboard():
     builder.row(types.InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_to_settings"))
     return builder.as_markup()
 
-# --- BILDIRISHNOMALAR ---
-def notifications_keyboard(is_on=True):
+# --- BILDIRISHNOMALAR (PREMIUM FORMAT) ---
+def notifications_keyboard():
     builder = InlineKeyboardBuilder()
-    status_text = "🟢 ON" if is_on else "🔴 OFF"
-    builder.row(types.InlineKeyboardButton(text=status_text, callback_data="toggle_notify"))
-    builder.row(types.InlineKeyboardButton(text="📅 Daily reminder", callback_data="daily_remind"))
+    builder.row(
+        types.InlineKeyboardButton(text="🟢 ON", callback_data="notify_on"),
+        types.InlineKeyboardButton(text="🔴 OFF", callback_data="notify_off")
+    )
+    builder.row(types.InlineKeyboardButton(text="📅 Daily reminder", callback_data="daily_reminder_menu"))
     builder.row(types.InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_to_settings"))
+    return builder.as_markup()
+
+# --- DAILY REMINDER MENYU (PREMIUM FORMAT) ---
+def daily_reminder_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(text="🟢 ON", callback_data="remind_on"),
+        types.InlineKeyboardButton(text="🔴 OFF", callback_data="remind_off")
+    )
+    builder.row(types.InlineKeyboardButton(text="🔙 Orqaga", callback_data="sett_notify"))
     return builder.as_markup()
 
 # --- SOZLAMALARGA QAYTISH ---
@@ -144,14 +161,4 @@ def back_to_settings_keyboard():
     builder = InlineKeyboardBuilder()
     builder.row(types.InlineKeyboardButton(text="🔙 Orqaga", callback_data="back_to_settings"))
     return builder.as_markup()
-
-# --- REPLY MENU (Yangi bildirishnoma tugmasi bilan) ---
-def main_reply_keyboard():
-    builder = ReplyKeyboardBuilder()
-    builder.row(types.KeyboardButton(text="🔍 Qidirish"), types.KeyboardButton(text="🏆 Top"))
-    builder.row(types.KeyboardButton(text="🎬 Epizodlar"))
-    builder.row(types.KeyboardButton(text="🌟 Sevimlilar"), types.KeyboardButton(text="🎲 Tasodifiy Anime"))
-    builder.row(types.KeyboardButton(text="👤 Profil"), types.KeyboardButton(text="⚙️ Sozlamalar"))
-    builder.row(types.KeyboardButton(text="🔔 Bildirishnomalar")) # Yangi qo'shilgan qator
-    return builder.as_markup(resize_keyboard=True)
     
