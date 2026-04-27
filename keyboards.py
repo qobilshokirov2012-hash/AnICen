@@ -2,7 +2,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from config import EMOJIS
 
-# --- 1. ASOSIY REPLAY MENYU ---
+# --- 1. ASOSIY REPLY MENYU ---
 def main_reply_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="🌟 Sevimlilar"), KeyboardButton(text="👤 Profil"))
@@ -13,7 +13,6 @@ def main_reply_keyboard():
 # --- 2. TILNI TANLASH (INLINE) ---
 def language_selection_keyboard():
     builder = InlineKeyboardBuilder()
-    # Emojilar config.py dan olinadi
     builder.add(InlineKeyboardButton(text="🇺🇿 O'zbek", callback_data="set_lang_uz"))
     builder.add(InlineKeyboardButton(text="🇷🇺 Русский", callback_data="set_lang_ru"))
     builder.add(InlineKeyboardButton(text="🇬🇧 English", callback_data="set_lang_en"))
@@ -34,7 +33,7 @@ def shop_inline_keyboard():
     builder.add(InlineKeyboardButton(text="👓 Gojo (600 Ryo)", callback_data="buy_rank_gojo"))
     builder.add(InlineKeyboardButton(text="🍥 Naruto (787 Ryo)", callback_data="buy_rank_naruto"))
     builder.row(InlineKeyboardButton(text="❓ Ryo haqida", callback_data="about_ryo"))
-    builder.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_settings")) # Profilga qaytish bo'lishi ham mumkin
+    builder.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_settings"))
     builder.adjust(1)
     return builder.as_markup()
 
@@ -70,4 +69,31 @@ def daily_reminder_keyboard():
     builder.adjust(2, 1)
     return builder.as_markup()
 
-# --- 5.
+def anime_prefs_keyboard():
+    builder = InlineKeyboardBuilder()
+    janrlar = ["Shonen", "Seinen", "Romantika", "Action", "Drama", "🎲 Random"]
+    for j in janrlar:
+        builder.add(InlineKeyboardButton(text=j, callback_data=f"pref_{j.lower()}"))
+    builder.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_settings"))
+    builder.adjust(2)
+    return builder.as_markup()
+
+def back_to_settings_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_settings"))
+    return builder.as_markup()
+
+# --- 5. SEVIMLILAR BO'LIMI ---
+def favorites_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="ℹ️ Haqida", callback_data="fav_about"))
+    builder.add(InlineKeyboardButton(text="🕒 Oxirgi qo'shilganlar", callback_data="fav_recent"))
+    builder.row(InlineKeyboardButton(text="🗑 Hammasini o'chirish", callback_data="clear_favorites"))
+    builder.adjust(2, 1)
+    return builder.as_markup()
+
+def back_to_fav_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_fav"))
+    return builder.as_markup()
+    
