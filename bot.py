@@ -113,11 +113,14 @@ async def profile_handler(message: types.Message):
     )
     await message.answer(profile_text, reply_markup=profile_inline_keyboard(), parse_mode=ParseMode.HTML)
 
-# --- DO'KON HANDLERI ---
+ # --- DO'KON HANDLERI (TO'G'RILANGAN) ---
 @dp.callback_query(F.data == "open_shop")
 async def shop_handler(callback: types.CallbackQuery):
+    # Foydalanuvchi ma'lumotlarini bazadan qayta o'qiymiz
     user_data = await users_collection.find_one({"user_id": callback.from_user.id})
-    ryo = user_data.get("ryo", 0)
+    
+    # Agar foydalanuvchi bazada bo'lsa ryo'ni oladi, bo'lmasa 16 (yoki 0) deb belgilaydi
+    ryo = user_data.get("ryo", 16) if user_data else 0
     
     text = (
         f"🛒 <b>AnICen Do‘koni</b>\n\n"
@@ -134,7 +137,7 @@ async def shop_handler(callback: types.CallbackQuery):
         f"• Xarid qilingandan so‘ng qaytarilmaydi"
     )
     await callback.message.edit_text(text, reply_markup=shop_inline_keyboard(), parse_mode=ParseMode.HTML)
-
+    
 # --- RYO HAQIDA ---
 @dp.callback_query(F.data == "about_ryo")
 async def about_ryo(callback: types.CallbackQuery):
