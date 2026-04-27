@@ -61,3 +61,30 @@ def back_to_main_keyboard():
     builder.row(types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_main"))
     return builder.as_markup()
     
+def favorites_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    # 1-qator: Orqaga va Keyingi
+    builder.row(
+        types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="fav_prev"),
+        types.InlineKeyboardButton(text="➡️ Keyingi", callback_data="fav_next")
+    )
+    # 2-qator: Haqida va Oxirgi qo'shilganlar
+    builder.row(
+        types.InlineKeyboardButton(text="Haqida? ↓", callback_data="fav_about"),
+        types.InlineKeyboardButton(text="Oxirgi qo'shilganlar", callback_data="fav_recent")
+    )
+    return builder.as_markup()
+
+def anime_item_keyboard(anime_id, is_favorite=False):
+    """Anime sahifasidagi toggle tugma"""
+    builder = InlineKeyboardBuilder()
+    if is_favorite:
+        text = "❌ Sevimlilardan olib tashlash"
+        callback = f"rem_fav_{anime_id}"
+    else:
+        text = "🌟 Sevimlilarga qo'shish"
+        callback = f"add_fav_{anime_id}"
+    
+    builder.row(types.InlineKeyboardButton(text=text, callback_data=callback))
+    return builder.as_markup()
+    
