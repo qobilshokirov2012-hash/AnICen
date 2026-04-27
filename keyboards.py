@@ -1,13 +1,22 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
+# Asosiy menyu
 def main_reply_keyboard():
     builder = ReplyKeyboardBuilder()
-    # Bildirishnomalar bu yerdan olib tashlandi, chunki u Sozlamalar ichida bor
     builder.row(KeyboardButton(text="🌟 Sevimlilar"), KeyboardButton(text="👤 Profil"))
     builder.row(KeyboardButton(text="🛒 Do‘kon"), KeyboardButton(text="⚙️ Sozlamalar"))
     return builder.as_markup(resize_keyboard=True)
 
+# Sozlamalar menyusi
+def settings_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="🌐 Tilni o'zgartirish", callback_data="sett_lang"))
+    builder.add(InlineKeyboardButton(text="🔔 Bildirishnomalar", callback_data="sett_notify"))
+    builder.adjust(1)
+    return builder.as_markup()
+
+# Bildirishnomalar boshqaruvi
 def notifications_keyboard():
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="🔔 Yoqish", callback_data="set_notify_on"))
@@ -17,11 +26,18 @@ def notifications_keyboard():
     builder.adjust(2, 1, 1)
     return builder.as_markup()
 
+# Kunlik eslatma boshqaruvi
 def daily_reminder_keyboard():
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="✅ Yoqish", callback_data="set_daily_on"))
     builder.add(InlineKeyboardButton(text="❌ O'chirish", callback_data="set_daily_off"))
     builder.row(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="sett_notify"))
     builder.adjust(2, 1)
+    return builder.as_markup()
+
+# Profil tugmalari
+def profile_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="🛒 Do'konga kirish", callback_data="open_shop"))
     return builder.as_markup()
     
