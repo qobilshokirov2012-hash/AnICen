@@ -1,24 +1,26 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from os import getenv
 
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# O'zingizning faylingizdan import
 from keyboards import main_menu_keyboard
 
 # --- 1. KONFIGURATSIYA ---
 BOT_TOKEN = getenv("BOT_TOKEN")
 MONGO_URL = getenv("MONGO_URL")
 
-# --- 2. OBYEKTLARNI YARATISH (Dispatcher shu yerda!) ---
+if not BOT_TOKEN or not MONGO_URL:
+    raise ValueError("BOT_TOKEN va MONGO_URL env o'zgaruvchilar kerak!")
+
+# --- 2. OBYEKTLARNI YARATISH ---
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher() # <--- MUHIM: dp obyekti handlerlardan yuqorida bo'lishi shart!
+dp = Dispatcher()
 
 # --- 3. BAZAGA ULANISH ---
 client = AsyncIOMotorClient(MONGO_URL)
@@ -26,7 +28,6 @@ db = client['anicen_v2']
 users_collection = db['users']
 
 # --- 4. HANDLERLAR ---
-
 @dp.message(CommandStart())
 async def start_cmd(message: types.Message):
     user_id = message.from_user.id
@@ -39,7 +40,7 @@ async def start_cmd(message: types.Message):
             "first_name": first_name,
             "points": 50,
             "favorites": [],
-            "join_date": datetime.now()
+            "join_date": datetime.now(timezone.utc)
         })
 
     welcome_text = (
@@ -63,11 +64,13 @@ async def start_cmd(message: types.Message):
 # --- 5. ISHGA TUSHIRISH ---
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        client.close()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logging.info("Bot to'xtatildi")
-        
