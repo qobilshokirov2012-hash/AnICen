@@ -10,14 +10,14 @@ def main_menu_keyboard():
         types.InlineKeyboardButton(text="🏆 Top", callback_data="top100")
     )
     
-    # 2-qator: Epizodlar (To'liq qator)
+    # 2-qator: Epizodlar
     builder.row(
         types.InlineKeyboardButton(text="🎬 Epizodlar", callback_data="episodes")
     )
     
-    # 3-qator: Sevimlilar (To'liq qator)
+    # 3-qator: Sevimlilar
     builder.row(
-        types.InlineKeyboardButton(text="🌟 Sevimlilar", callback_data="favs")
+        types.InlineKeyboardButton(text="🔥 Sevimlilar", callback_data="favs")
     )
     
     # 4-qator: Profil va Sozlamalar
@@ -26,10 +26,5 @@ def main_menu_keyboard():
         types.InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings")
     )
     
-    return builder.as_markup()
-
-def back_to_main_keyboard():
-    builder = InlineKeyboardBuilder()
-    builder.row(types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_main"))
     return builder.as_markup()
     
