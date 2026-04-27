@@ -1,18 +1,15 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
-from config import EMOJIS
 
-# --- 1. ASOSIY REPLY MENYU (Bildirishnomalar olib tashlandi) ---
 def main_reply_keyboard():
     builder = ReplyKeyboardBuilder()
+    # Bildirishnomalar bu yerdan olib tashlandi, chunki u Sozlamalar ichida bor
     builder.row(KeyboardButton(text="🌟 Sevimlilar"), KeyboardButton(text="👤 Profil"))
     builder.row(KeyboardButton(text="🛒 Do‘kon"), KeyboardButton(text="⚙️ Sozlamalar"))
     return builder.as_markup(resize_keyboard=True)
 
-# --- 2. BILDIRISHNOMALAR (Tugmalar callback_data'si to'g'rilandi) ---
 def notifications_keyboard():
     builder = InlineKeyboardBuilder()
-    # Bu callback_data'lar endi handlers/settings.py dagi kodga mos
     builder.add(InlineKeyboardButton(text="🔔 Yoqish", callback_data="set_notify_on"))
     builder.add(InlineKeyboardButton(text="🔕 O'chirish", callback_data="set_notify_off"))
     builder.row(InlineKeyboardButton(text="📅 Kunlik eslatma", callback_data="daily_reminder_menu"))
