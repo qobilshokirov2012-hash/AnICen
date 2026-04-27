@@ -11,11 +11,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 # Keyboards faylingizdan barcha kerakli funksiyalarni import qilamiz
 from keyboards import (
-    # ... boshqa importlar
     profile_inline_keyboard,
     shop_inline_keyboard,
     back_to_shop_keyboard,
-    main_reply_keyboard
+    main_reply_keyboard,
+    favorites_inline_keyboard,
+    back_to_fav_keyboard,
+    anime_item_keyboard
 )
 
 from config import EMOJIS
@@ -41,10 +43,14 @@ async def start_cmd(message: types.Message):
         
         user_data = await users_collection.find_one({"user_id": user_id})
         if not user_data:
+            # Yangi foydalanuvchi uchun Ryo va Rank tizimi boshlang'ich qiymatlari
             await users_collection.insert_one({
                 "user_id": user_id,
                 "first_name": first_name,
-                "points": 50,
+                "ryo": 16, # Start bonusi
+                "rank": "新規ユーザー (Shinki Yūza)",
+                "watched_count": 0,
+                "continue_count": 0,
                 "favorites": [],
                 "join_date": datetime.now(timezone.utc)
             })
@@ -66,13 +72,17 @@ async def start_cmd(message: types.Message):
         await message.answer(welcome_text, reply_markup=main_reply_keyboard(), parse_mode=ParseMode.HTML)
     except Exception as e:
         logging.error(f"Start xatosi: {e}")
+
 # --- PROFIL BO'LIMI ---
 @dp.message(F.text == "👤 Profil")
 async def profile_handler(message: types.Message):
     user_id = message.from_user.id
     user_data = await users_collection.find_one({"user_id": user_id})
     
-    # Ma'lumotlarni bazadan olamiz (agar bo'lmasa default qiymat)
+    if not user_data:
+        await message.answer("Profil ma'lumotlari topilmadi. Iltimos, /start bosing.")
+        return
+
     first_name = user_data.get("first_name", "Foydalanuvchi")
     username = message.from_user.username or "yo'q"
     reg_date = user_data.get("join_date").strftime("%d.%m.%Y") if user_data.get("join_date") else "Noma'lum"
@@ -81,7 +91,7 @@ async def profile_handler(message: types.Message):
     watched = user_data.get("watched_count", 0)
     continuing = user_data.get("continue_count", 0)
     
-    ryo = user_data.get("ryo", 50) # Boshlang'ich Ryo
+    ryo = user_data.get("ryo", 16)
     rank = user_data.get("rank", "新規ユーザー (Shinki Yūza)")
 
     profile_text = (
@@ -132,12 +142,22 @@ async def about_ryo(callback: types.CallbackQuery):
         "💴 <b>Ryo — AnICen Botning asosiy pul birligi</b>\n\n"
         "━━━━━━━━━━━━━━━\n\n"
         "🎌 <b>Ryo nima?</b>\n"
-        "Ryo — anime dunyosidagi maxsus valyuta bo‘lib, bot ichidagi xaridlar uchun ishlatiladi.\n\n"
+        "Ryo — anime dunyosidagi maxsus valyuta bo‘lib, bot ichidagi barcha xaridlar va darajalar uchun ishlatiladi.\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "💡 <b>Qanday ishlaydi?</b>\n"
+        "• Rank sotib olish\n"
+        "• Do‘kon xaridlari\n"
+        "• Bonus itemlar\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
         "➕ <b>Ryo olish yo‘llari:</b>\n"
         "• /start → +16 Ryo\n"
         "• Anime ko‘rish → +10 Ryo\n"
         "• Do‘st taklif qilish → +26 Ryo\n"
-        "• Savollarga javob → +5 Ryo"
+        "• Savollarga javob → +5 Ryo\n"
+        "• Kunlik topshiriqlar → bonus\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "⚠️ <b>Eslatma:</b>\n"
+        "Ryo faqat bot ichida ishlatiladi va real pul emas."
     )
     await callback.message.edit_text(text, reply_markup=back_to_shop_keyboard(), parse_mode=ParseMode.HTML)
 
@@ -147,23 +167,68 @@ async def about_ranks(callback: types.CallbackQuery):
     text = (
         "🧠 <b>DARAJALAR (RANK SYSTEM)</b>\n\n"
         "🥚 <b>1. 新規ユーザー (Shinki Yūza)</b>\n"
-        "📌 Default rank\n\n"
+        "🔹 Yangi foydalanuvchi\n"
+        "📌 Default rank (birinchi /start)\n\n"
         "⚔️ <b>2. Kakashi</b>\n"
-        "Shart: 15 kun aktivlik\n"
+        "Shart:\n"
+        "15 kun aktiv anime ko‘rish\n"
+        "❌ 15 kundan oldin sotib bo‘lmaydi\n"
         "💴 Narx: 567 Ryo\n\n"
-        "🍥 <b>5. Naruto (MAX)</b>\n"
-        "Shart: 2 oy aktivlik\n"
-        "💴 Narx: 787 Ryo"
+        "🌸 <b>3. Sakura</b>\n"
+        "Shart:\n"
+        "1 oy aktivlik\n"
+        "📌 Har 1 anime epizod = +20 Ryo bonus\n"
+        "💴 Narx: 600 Ryo\n"
+        "❌ 1 oydan oldin sotib bo‘lmaydi\n\n"
+        "🗡 <b>4. Sasuke</b>\n"
+        "Shart:\n"
+        "1.5 oy aktivlik\n"
+        "📌 Har epizod = +20 Ryo\n"
+        "💴 Narx: 693 Ryo\n"
+        "❌ 1.5 oydan oldin sotib bo‘lmaydi\n\n"
+        "🍥 <b>5. Naruto (MAX RANK)</b>\n"
+        "Shart:\n"
+        "2 oy aktivlik\n"
+        "📌 Har epizod = +20 Ryo\n"
+        "💴 Narx: 787 Ryo\n"
+        "❌ 2 oydan oldin sotib bo‘lmaydi"
     )
     await callback.message.edit_text(text, reply_markup=back_to_shop_keyboard(), parse_mode=ParseMode.HTML)
 
 # --- PROFILGA QAYTISH ---
 @dp.callback_query(F.data == "back_to_profile")
 async def back_to_profile(callback: types.CallbackQuery):
-    await callback.message.delete()
-    # Foydalanuvchiga qaytadan profilni yuboramiz
-    # Yuqoridagi profile_handler mantiqini callback ichida chaqirib qo'yish kifoya
-    # (Qulaylik uchun bu yerda xabarni o'chirib, yangi yuborish usulini qo'lladim)
+    user_id = callback.from_user.id
+    user_data = await users_collection.find_one({"user_id": user_id})
+    
+    first_name = user_data.get("first_name", "Foydalanuvchi")
+    username = callback.from_user.username or "yo'q"
+    reg_date = user_data.get("join_date").strftime("%d.%m.%Y") if user_data.get("join_date") else "Noma'lum"
+    
+    fav_count = len(user_data.get("favorites", []))
+    watched = user_data.get("watched_count", 0)
+    continuing = user_data.get("continue_count", 0)
+    ryo = user_data.get("ryo", 16)
+    rank = user_data.get("rank", "新規ユーザー (Shinki Yūza)")
+
+    profile_text = (
+        f"<b>AnICen | {first_name}</b>\n"
+        f"<tg-emoji emoji-id='5332724926216428039'>👤</tg-emoji> Profil\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5422683699130933153'>🆔</tg-emoji> ID: <code>{user_id}</code>\n"
+        f"<tg-emoji emoji-id='5879770735999717115'>👤</tg-emoji> Ism: {first_name}\n"
+        f"<tg-emoji emoji-id='5879770735999717115'>🆔</tg-emoji> Username: @{username}\n"
+        f"<tg-emoji emoji-id='5251537301154062376'>📅</tg-emoji> Ro‘yxatdan o‘tgan: {reg_date}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> Sevimlilar: {fav_count}\n"
+        f"<tg-emoji emoji-id='5967411695453213733'>🎬</tg-emoji> Ko‘rilgan anime: {watched}\n"
+        f"<tg-emoji emoji-id='5215677360774324968'>⏳</tg-emoji> Davom etilmoqda: {continuing}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5348276504579031076'>🧠</tg-emoji> Daraja: {rank}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5222126026536004111'>💴</tg-emoji> Ryo: {ryo}\n"
+    )
+    await callback.message.edit_text(profile_text, reply_markup=profile_inline_keyboard(), parse_mode=ParseMode.HTML)
 
 # --- SEVIMLILAR BO'LIMI ---
 @dp.message(F.text == "🌟 Sevimlilar")
@@ -185,7 +250,7 @@ async def favorites_handler(message: types.Message):
     )
     await message.answer(text, reply_markup=favorites_inline_keyboard(), parse_mode=ParseMode.HTML)
 
-# --- "HAQIDA? ↓" TUGMASI (Matn shu yerga ko'chirildi) ---
+# --- "HAQIDA? ↓" TUGMASI ---
 @dp.callback_query(F.data == "fav_about")
 async def fav_about_handler(callback: types.CallbackQuery):
     about_text = (
@@ -207,7 +272,8 @@ async def fav_about_handler(callback: types.CallbackQuery):
 # --- SEVIMLILAR ICHIDAGI NAVIGATSIYA ---
 @dp.callback_query(F.data == "back_to_fav")
 async def back_to_fav_call(callback: types.CallbackQuery):
-    user_data = await users_collection.find_one({"user_id": callback.from_user.id})
+    user_id = callback.from_user.id
+    user_data = await users_collection.find_one({"user_id": user_id})
     favs = user_data.get("favorites", [])
     fav_list = "\n".join([f"{i+1}. {name}" for i, name in enumerate(favs[:10])]) if favs else "Hozircha ro'yxat bo'sh."
     
@@ -235,7 +301,6 @@ async def toggle_favorite(callback: types.CallbackQuery):
     anime_id = callback.data.split("_")[-1]
     user_id = callback.from_user.id
     
-    # Hozircha sinov uchun anime nomi sifatida anime_id ni olamiz
     if action == "add":
         await users_collection.update_one({"user_id": user_id}, {"$addToSet": {"favorites": anime_id}})
         await callback.answer("✅ Sevimlilarga qo‘shildi!", show_alert=False)
