@@ -67,6 +67,8 @@ async def start_cmd(message: types.Message):
         logging.error(f"Start xatosi: {e}")
 
 # --- PROFIL BO'LIMI ---
+# bot.py dagi profil qismini shunday yangilang:
+
 @dp.message(F.text == "👤 Profil")
 async def profile_handler(message: types.Message):
     user_data = await users_collection.find_one({"user_id": message.from_user.id})
@@ -74,10 +76,21 @@ async def profile_handler(message: types.Message):
     
     text = (
         f"<tg-emoji emoji-id='{EMOJIS['profile']}'>👤</tg-emoji> <b>PROFILINGIZ</b>\n\n"
-        f"💰 Ballaringiz: <b>{points} ball</b>"
+        f"💰 Ballaringiz: <b>{points} ball</b>\n\n"
+        f"<i>Ballaringiz orqali botdagi turli xizmatlarni sotib olishingiz mumkin!</i>"
     )
-    await message.answer(text, parse_mode=ParseMode.HTML)
+    # Mana shu yerda profile_inline_keyboard() ni ulaymiz
+    await message.answer(text, reply_markup=profile_inline_keyboard(), parse_mode=ParseMode.HTML)
 
+# Ballarni sarflash tugmasi bosilganda
+@dp.callback_query(F.data == "spend_points")
+async def spend_points_handler(callback: types.CallbackQuery):
+    text = (
+        "🪙 <b>Ballarni sarflash bo'limi</b>\n\n"
+        "O'zingizga kerakli xizmatni tanlang:"
+    )
+    await callback.message.edit_text(text, reply_markup=spend_points_inline_keyboard(), parse_mode=ParseMode.HTML)
+    
 # --- SEVIMLILAR BO'LIMI ---
 @dp.message(F.text == "🌟 Sevimlilar")
 async def favorites_handler(message: types.Message):
