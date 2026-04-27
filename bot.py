@@ -10,7 +10,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from keyboards import * # --- KONFIGURATSIYA ---
+# O'zingiz yaratgan fayllardan import
+from keyboards import *
+
+# --- KONFIGURATSIYA ---
 BOT_TOKEN = getenv("BOT_TOKEN")
 MONGO_URL = getenv("MONGO_URL")
 
@@ -55,7 +58,7 @@ async def start(message: types.Message):
             "notifications": True,
             "rank": "Yangi boshlovchi 🌱"
         })
-        await message.answer(f"Xush kelibsiz! Sizga 50 🪙 bonus berildi.\nADK: <code>{new_adk}</code>", 
+        await message.answer(f"Salom! Sizga 50 🪙 bonus berildi.\nADK: <code>{new_adk}</code>", 
                              reply_markup=main_menu_keyboard(), parse_mode="HTML")
     else:
         await message.answer("Xush kelibsiz! Bugun nima ko'ramiz?", reply_markup=main_menu_keyboard())
@@ -125,7 +128,10 @@ async def toggle_notifications(callback: types.CallbackQuery):
     
     await users_collection.update_one({"user_id": user_id}, {"$set": {"notifications": new_status}})
     await callback.message.edit_reply_markup(reply_markup=settings_keyboard(notifications_on=new_status))
-    await callback.answer(f"Bildirishnomalar {'yoqildi' if new_status else 'o\'chirildi'}")
+    
+    # XATOLIK TUZATILDI: f-string ichida backslash ishlatmaslik uchun o'zgaruvchiga olindi
+    status_msg = "yoqildi ✅" if new_status else "o'chirildi ❌"
+    await callback.answer(f"Bildirishnomalar {status_msg}")
 
 # --- DO'KON VA REFERAL ---
 @dp.callback_query(F.data == "spend")
@@ -144,7 +150,7 @@ async def back(callback: types.CallbackQuery):
     await callback.message.edit_text("Asosiy menyu:", reply_markup=main_menu_keyboard())
     await callback.answer()
 
-# --- BOTNI ISHGA TUSHIRISH (FAQAT OXIRIDA) ---
+# --- BOTNI ISHGA TUSHIRISH ---
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
@@ -154,4 +160,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logging.info("Bot to'xtatildi")
-               
+    
