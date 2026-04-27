@@ -27,10 +27,7 @@ def profile_keyboard():
         types.InlineKeyboardButton(text="🪙 Ballarni sarflash", callback_data="spend"),
         types.InlineKeyboardButton(text="👥 Taklifnomalar", callback_data="referral")
     )
-    builder.row(
-        types.InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings"),
-        types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_main")
-    )
+    builder.row(types.InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_main"))
     return builder.as_markup()
 
 def settings_keyboard(notifications_on=True):
