@@ -15,8 +15,12 @@ from keyboards import (
     main_reply_keyboard, 
     back_to_main_keyboard,
     favorites_inline_keyboard,
-    anime_item_keyboard
+    back_to_fav_keyboard,  # Mana shu yangi qo'shildi
+    anime_item_keyboard,
+    profile_inline_keyboard,
+    spend_points_inline_keyboard
 )
+
 from config import EMOJIS
 
 # --- KONFIGURATSIYA ---
@@ -98,35 +102,53 @@ async def favorites_handler(message: types.Message):
     user_data = await users_collection.find_one({"user_id": user_id})
     favs = user_data.get("favorites", [])
     
-    # Sevimlilar ro'yxatini shakllantirish
     if not favs:
         fav_list = "Hozircha ro'yxat bo'sh."
     else:
         fav_list = "\n".join([f"{i+1}. {name}" for i, name in enumerate(favs[:10])])
 
     text = (
-        f"<tg-emoji emoji-id='5258259534857645678'>🌟</tg-emoji> Sizning sevimli animelaringiz:\n\n"
+        f"<tg-emoji emoji-id='5258259534857645678'>🌟</tg-emoji> <b>Sizning sevimli animelaringiz:</b>\n\n"
         f"{fav_list}\n\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"<tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> <b>Sevimlilar (Favorites)</b>\n"
-        f"<tg-emoji emoji-id='5442875573045045415'>📄</tg-emoji> Sevimlilar — siz yoqtirgan animelarni saqlash va tez topish uchun bo‘lim.\n"
-        f"<tg-emoji emoji-id='5436010183786513326'>❓</tg-emoji> <b>Nima qiladi?</b>\n"
-        f"<tg-emoji emoji-id='5397916757333654639'>✅</tg-emoji> Sizga yoqqan animelarni saqlaydi\n"
-        f"<tg-emoji emoji-id='5336993488053477866'>🚀</tg-emoji> Keyin tez ochib ko‘rish imkonini beradi\n"
-        f"<tg-emoji emoji-id='5258514780469075716'>📂</tg-emoji> Barcha sevimlilar ro‘yxatini bir joyda jamlaydi\n"
-        f"<tg-emoji emoji-id='5456429416089410910'>🛠</tg-emoji> <b>Qanday ishlaydi?</b>\n"
-        f"Anime sahifasida <tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> Sevimlilarga qo‘shish tugmasini bosing\n"
-        f"Anime avtomatik sevimlilar ro‘yxatiga qo‘shiladi\n"
-        f"Yana bosilsa → <tg-emoji emoji-id='5949785428843302949'>❌</tg-emoji> ro‘yxatdan olib tashlanadi\n"
-        f"<tg-emoji emoji-id='6035300138967112061'>📋</tg-emoji> <b>Sevimlilar menyusi</b>\n"
-        f"Bu yerda siz:\n"
-        f"<tg-emoji emoji-id='5258514780469075716'>📂</tg-emoji> Saqlangan animelarni ko‘rasiz\n"
-        f"<tg-emoji emoji-id='5336993488053477866'>🔍</tg-emoji> Har bir anime sahifasini ochasiz\n"
-        f"<tg-emoji emoji-id='5949785428843302949'>🗑</tg-emoji> Keraksizlarini olib tashlaysiz"
+        f"<i>Qolgan ma'lumotlar uchun 'Haqida? ↓' tugmasini bosing.</i>"
     )
     await message.answer(text, reply_markup=favorites_inline_keyboard(), parse_mode=ParseMode.HTML)
 
-# Oxirgi qo'shilganlar handler
+# --- "HAQIDA? ↓" TUGMASI (Matn shu yerga ko'chirildi) ---
+@dp.callback_query(F.data == "fav_about")
+async def fav_about_handler(callback: types.CallbackQuery):
+    about_text = (
+        f"<tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> <b>Sevimlilar (Favorites)</b>\n"
+        f"<tg-emoji emoji-id='5442875573045045415'>📄</tg-emoji> Sevimlilar — siz yoqtirgan animelarni saqlash va tez topish uchun bo‘lim.\n\n"
+        f"<tg-emoji emoji-id='5436010183786513326'>❓</tg-emoji> <b>Nima qiladi?</b>\n"
+        f"<tg-emoji emoji-id='5397916757333654639'>✅</tg-emoji> Sizga yoqqan animelarni saqlaydi\n"
+        f"<tg-emoji emoji-id='5336993488053477866'>🚀</tg-emoji> Keyin tez ochib ko‘rish imkonini beradi\n"
+        f"<tg-emoji emoji-id='5258514780469075716'>📂</tg-emoji> Barcha sevimlilar ro‘yxatini bir joyda jamlaydi\n\n"
+        f"<tg-emoji emoji-id='5456429416089410910'>🛠</tg-emoji> <b>Qanday ishlaydi?</b>\n"
+        f"• Anime sahifasida 🌟 Sevimlilarga qo‘shish tugmasini bosing\n"
+        f"• Anime avtomatik sevimlilar ro‘yxatiga qo‘shiladi\n"
+        f"• Yana bosilsa → ❌ ro‘yxatdan olib tashlanadi\n\n"
+        f"<tg-emoji emoji-id='6035300138967112061'>📋</tg-emoji> <b>Sevimlilar menyusi</b>\n"
+        f"Bu yerda siz saqlangan animelarni ko‘rasiz va boshqarishingiz mumkin."
+    )
+    await callback.message.edit_text(about_text, reply_markup=back_to_fav_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- SEVIMLILAR ICHIDAGI NAVIGATSIYA ---
+@dp.callback_query(F.data == "back_to_fav")
+async def back_to_fav_call(callback: types.CallbackQuery):
+    user_data = await users_collection.find_one({"user_id": callback.from_user.id})
+    favs = user_data.get("favorites", [])
+    fav_list = "\n".join([f"{i+1}. {name}" for i, name in enumerate(favs[:10])]) if favs else "Hozircha ro'yxat bo'sh."
+    
+    text = (
+        f"<tg-emoji emoji-id='5258259534857645678'>🌟</tg-emoji> <b>Sizning sevimli animelaringiz:</b>\n\n"
+        f"{fav_list}\n\n"
+        f"━━━━━━━━━━━━━━━"
+    )
+    await callback.message.edit_text(text, reply_markup=favorites_inline_keyboard(), parse_mode=ParseMode.HTML)
+
+# Oxirgi qo'shilganlar
 @dp.callback_query(F.data == "fav_recent")
 async def fav_recent_handler(callback: types.CallbackQuery):
     text = (
@@ -134,8 +156,8 @@ async def fav_recent_handler(callback: types.CallbackQuery):
         f"— Naruto (new)\n"
         f"— Boruto (new)"
     )
-    await callback.message.edit_text(text, reply_markup=back_to_main_keyboard(), parse_mode=ParseMode.HTML)
-
+    await callback.message.edit_text(text, reply_markup=back_to_fav_keyboard(), parse_mode=ParseMode.HTML)
+    
 # --- TOGGLE SYSTEM (ADD/REMOVE) ---
 @dp.callback_query(F.data.startswith(("add_fav_", "rem_fav_")))
 async def toggle_favorite(callback: types.CallbackQuery):
