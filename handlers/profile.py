@@ -1,18 +1,17 @@
 from aiogram import Router, F, types
+from aiogram.filters import Command  # <--- MANA SHU QATORNI QO'SHING
 from aiogram.enums import ParseMode
 from motor.motor_asyncio import AsyncIOMotorClient
 from os import getenv
 from datetime import datetime
 
-# config.py va keyboards.py dan importlar
+# Qolgan importlar...
 from config import EMOJIS
 from keyboards import (
     profile_inline_keyboard,
     shop_inline_keyboard,
     back_to_shop_keyboard
 )
-
-router = Router()
 
 # Ma'lumotlar bazasi ulanishi
 client = AsyncIOMotorClient(getenv("MONGO_URL"))
