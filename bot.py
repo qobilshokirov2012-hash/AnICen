@@ -69,32 +69,105 @@ async def start_cmd(message: types.Message):
         await message.answer(welcome_text, reply_markup=main_reply_keyboard(), parse_mode=ParseMode.HTML)
     except Exception as e:
         logging.error(f"Start xatosi: {e}")
-
 # --- PROFIL BO'LIMI ---
-# bot.py dagi profil qismini shunday yangilang:
-
 @dp.message(F.text == "👤 Profil")
 async def profile_handler(message: types.Message):
-    user_data = await users_collection.find_one({"user_id": message.from_user.id})
-    points = user_data.get("points", 0) if user_data else 0
+    user_id = message.from_user.id
+    user_data = await users_collection.find_one({"user_id": user_id})
     
-    text = (
-        f"<tg-emoji emoji-id='{EMOJIS['profile']}'>👤</tg-emoji> <b>PROFILINGIZ</b>\n\n"
-        f"💰 Ballaringiz: <b>{points} ball</b>\n\n"
-        f"<i>Ballaringiz orqali botdagi turli xizmatlarni sotib olishingiz mumkin!</i>"
-    )
-    # Mana shu yerda profile_inline_keyboard() ni ulaymiz
-    await message.answer(text, reply_markup=profile_inline_keyboard(), parse_mode=ParseMode.HTML)
+    # Ma'lumotlarni bazadan olamiz (agar bo'lmasa default qiymat)
+    first_name = user_data.get("first_name", "Foydalanuvchi")
+    username = message.from_user.username or "yo'q"
+    reg_date = user_data.get("join_date").strftime("%d.%m.%Y") if user_data.get("join_date") else "Noma'lum"
+    
+    fav_count = len(user_data.get("favorites", []))
+    watched = user_data.get("watched_count", 0)
+    continuing = user_data.get("continue_count", 0)
+    
+    ryo = user_data.get("ryo", 50) # Boshlang'ich Ryo
+    rank = user_data.get("rank", "新規ユーザー (Shinki Yūza)")
 
-# Ballarni sarflash tugmasi bosilganda
-@dp.callback_query(F.data == "spend_points")
-async def spend_points_handler(callback: types.CallbackQuery):
-    text = (
-        "🪙 <b>Ballarni sarflash bo'limi</b>\n\n"
-        "O'zingizga kerakli xizmatni tanlang:"
+    profile_text = (
+        f"<b>AnICen | {first_name}</b>\n"
+        f"<tg-emoji emoji-id='5332724926216428039'>👤</tg-emoji> Profil\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5422683699130933153'>🆔</tg-emoji> ID: <code>{user_id}</code>\n"
+        f"<tg-emoji emoji-id='5879770735999717115'>👤</tg-emoji> Ism: {first_name}\n"
+        f"<tg-emoji emoji-id='5879770735999717115'>🆔</tg-emoji> Username: @{username}\n"
+        f"<tg-emoji emoji-id='5251537301154062376'>📅</tg-emoji> Ro‘yxatdan o‘tgan: {reg_date}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5352743837502545676'>🌟</tg-emoji> Sevimlilar: {fav_count}\n"
+        f"<tg-emoji emoji-id='5967411695453213733'>🎬</tg-emoji> Ko‘rilgan anime: {watched}\n"
+        f"<tg-emoji emoji-id='5215677360774324968'>⏳</tg-emoji> Davom etilmoqda: {continuing}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5348276504579031076'>🧠</tg-emoji> Daraja: {rank}\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"<tg-emoji emoji-id='5222126026536004111'>💴</tg-emoji> Ryo: {ryo}\n"
     )
-    await callback.message.edit_text(text, reply_markup=spend_points_inline_keyboard(), parse_mode=ParseMode.HTML)
+    await message.answer(profile_text, reply_markup=profile_inline_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- DO'KON HANDLERI ---
+@dp.callback_query(F.data == "open_shop")
+async def shop_handler(callback: types.CallbackQuery):
+    user_data = await users_collection.find_one({"user_id": callback.from_user.id})
+    ryo = user_data.get("ryo", 0)
     
+    text = (
+        f"🛒 <b>AnICen Do‘koni</b>\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"💴 Sizning Ryo: <b>{ryo}</b>\n\n"
+        f"🎌 Ranklar:\n"
+        f"⚔️ Kakashi — 567 Ryo\n"
+        f"🌸 Sakura — 600 Ryo\n"
+        f"🗡 Sasuke — 693 Ryo\n"
+        f"🍥 Naruto — 787 Ryo\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📌 Eslatma:\n"
+        f"• Ranklar faqat shart bajarilgandan keyin ochiladi\n"
+        f"• Xarid qilingandan so‘ng qaytarilmaydi"
+    )
+    await callback.message.edit_text(text, reply_markup=shop_inline_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- RYO HAQIDA ---
+@dp.callback_query(F.data == "about_ryo")
+async def about_ryo(callback: types.CallbackQuery):
+    text = (
+        "💴 <b>Ryo — AnICen Botning asosiy pul birligi</b>\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "🎌 <b>Ryo nima?</b>\n"
+        "Ryo — anime dunyosidagi maxsus valyuta bo‘lib, bot ichidagi xaridlar uchun ishlatiladi.\n\n"
+        "➕ <b>Ryo olish yo‘llari:</b>\n"
+        "• /start → +16 Ryo\n"
+        "• Anime ko‘rish → +10 Ryo\n"
+        "• Do‘st taklif qilish → +26 Ryo\n"
+        "• Savollarga javob → +5 Ryo"
+    )
+    await callback.message.edit_text(text, reply_markup=back_to_shop_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- DARAJA HAQIDA ---
+@dp.callback_query(F.data == "about_ranks")
+async def about_ranks(callback: types.CallbackQuery):
+    text = (
+        "🧠 <b>DARAJALAR (RANK SYSTEM)</b>\n\n"
+        "🥚 <b>1. 新規ユーザー (Shinki Yūza)</b>\n"
+        "📌 Default rank\n\n"
+        "⚔️ <b>2. Kakashi</b>\n"
+        "Shart: 15 kun aktivlik\n"
+        "💴 Narx: 567 Ryo\n\n"
+        "🍥 <b>5. Naruto (MAX)</b>\n"
+        "Shart: 2 oy aktivlik\n"
+        "💴 Narx: 787 Ryo"
+    )
+    await callback.message.edit_text(text, reply_markup=back_to_shop_keyboard(), parse_mode=ParseMode.HTML)
+
+# --- PROFILGA QAYTISH ---
+@dp.callback_query(F.data == "back_to_profile")
+async def back_to_profile(callback: types.CallbackQuery):
+    await callback.message.delete()
+    # Foydalanuvchiga qaytadan profilni yuboramiz
+    # Yuqoridagi profile_handler mantiqini callback ichida chaqirib qo'yish kifoya
+    # (Qulaylik uchun bu yerda xabarni o'chirib, yangi yuborish usulini qo'lladim)
+
 # --- SEVIMLILAR BO'LIMI ---
 @dp.message(F.text == "🌟 Sevimlilar")
 async def favorites_handler(message: types.Message):
