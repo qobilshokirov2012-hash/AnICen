@@ -88,3 +88,32 @@ def anime_item_keyboard(anime_id, is_favorite=False):
     builder.row(types.InlineKeyboardButton(text=text, callback_data=callback))
     return builder.as_markup()
     
+# keyboards.py fayliga qo'shing
+
+def profile_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    # Ballarni sarflash bo'limiga o'tish
+    builder.row(
+        types.InlineKeyboardButton(text="🪙 Ballarni sarflash", callback_data="spend_points")
+    )
+    # Ballar qanday yig'ilishi haqida ma'lumot
+    builder.row(
+        types.InlineKeyboardButton(text="❓ Ballar haqida", callback_data="about_points")
+    )
+    return builder.as_markup()
+
+def spend_points_inline_keyboard():
+    builder = InlineKeyboardBuilder()
+    # Do'kon elementlari (misol tariqasida)
+    builder.row(
+        types.InlineKeyboardButton(text="🚫 Reklamani o'chirish", callback_data="buy_no_ads")
+    )
+    builder.row(
+        types.InlineKeyboardButton(text="✨ Maxsus profil", callback_data="buy_premium_profile")
+    )
+    # Orqaga profilga qaytish
+    builder.row(
+        types.InlineKeyboardButton(text="⬅️ Profilga qaytish", callback_data="back_to_profile")
+    )
+    return builder.as_markup()
+    
