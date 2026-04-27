@@ -1,17 +1,20 @@
 from aiogram import Router, F, types
-from aiogram.filters import Command  # <--- MANA SHU QATORNI QO'SHING
+from aiogram.filters import Command
 from aiogram.enums import ParseMode
 from motor.motor_asyncio import AsyncIOMotorClient
 from os import getenv
 from datetime import datetime
 
-# Qolgan importlar...
+# config.py va keyboards.py dan importlar
 from config import EMOJIS
 from keyboards import (
     profile_inline_keyboard,
     shop_inline_keyboard,
     back_to_shop_keyboard
 )
+
+# Router ob'ektini yaratish (BU JUDA MUHIM)
+router = Router()
 
 # Ma'lumotlar bazasi ulanishi
 client = AsyncIOMotorClient(getenv("MONGO_URL"))
@@ -30,7 +33,10 @@ async def profile_handler(message: types.Message):
         return
 
     first_name = user_data.get("first_name", message.from_user.first_name)
-    reg_date = user_data.get("join_date").strftime("%d.%m.%Y") if user_data.get("join_date") else "Noma'lum"
+    # Sanani formatlash
+    join_date = user_data.get("join_date")
+    reg_date = join_date.strftime("%d.%m.%Y") if join_date else "Noma'lum"
+    
     ryo = user_data.get("ryo", 0)
     rank = user_data.get("rank", "Yangi")
     watched = user_data.get("watched_count", 0)
@@ -84,9 +90,10 @@ async def buy_rank_process(callback: types.CallbackQuery):
     price = prices.get(rank_key)
     
     user_data = await users_collection.find_one({"user_id": callback.from_user.id})
+    current_ryo = user_data.get("ryo", 0)
     
-    if user_data.get("ryo", 0) < price:
-        await callback.answer(f"❌ Mablag‘ yetarli emas! Sizga yana {price - user_data.get('ryo')} Ryo kerak.", show_alert=True)
+    if current_ryo < price:
+        await callback.answer(f"❌ Mablag‘ yetarli emas! Sizga yana {price - current_ryo} Ryo kerak.", show_alert=True)
     else:
         new_rank_name = rank_key.capitalize()
         await users_collection.update_one(
@@ -97,7 +104,6 @@ async def buy_rank_process(callback: types.CallbackQuery):
             }
         )
         await callback.answer(f"🎉 Tabriklaymiz! Siz {new_rank_name} darajasini sotib oldingiz!", show_alert=True)
-        # Menyuni yangilash
         await shop_handler(callback)
 
 # 4. RYO HAQIDA MA'LUMOT
