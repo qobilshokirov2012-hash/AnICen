@@ -1,5 +1,15 @@
-# config.py
+import os
+from dotenv import load_dotenv
 
+# .env fayli bo'lsa yuklaydi (mahalliy kompyuterda ishlash uchun)
+load_dotenv()
+
+# Railway Variables'dan ma'lumotlarni olish
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = os.getenv("ADMIN_ID")
+MONGO_URL = os.getenv("MONGO_URL")
+
+# Emojilar lug'ati (takrorlanishlarsiz va vergullar bilan)
 EMOJIS = {
     'pinned': '5397782960512444700',
     'white_heart': '5238221051405549815',
@@ -45,6 +55,6 @@ EMOJIS = {
     'command': '5962952497197748583',
     'delete': '6030757850274336631',
     'full_hd': '5924722061288150929',
-    'hd': '5850392884817172292', # Shu yerda vergul bor edi
+    'hd': '5850392884817172292',
     'wave': '6028084074218790358'
 }
