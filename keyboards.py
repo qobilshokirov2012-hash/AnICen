@@ -1,16 +1,21 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from config import EMOJIS
 
-def get_start_keyboard():
-    buttons = [
+def get_main_menu():
+    # Tugmalarni sening xohishing bo'yicha tartiblaymiz
+    kb = [
         [
-            InlineKeyboardButton(text="🔍 Qidirish", switch_inline_query_current_chat=""),
-            InlineKeyboardButton(text="❤️ Sevimlilar", callback_data="favorites")
+            KeyboardButton(text=f"🔍 Qidiruv"),
+            KeyboardButton(text=f"❤️ Sevimlilar")
         ],
         [
-            InlineKeyboardButton(text="👤 Profil", callback_data="profile"),
-            InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="settings")
+            KeyboardButton(text=f"👤 Profil"),
+            KeyboardButton(text=f"⚙️ Sozlamalar")
         ]
     ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True, # Tugmalarni ixcham qiladi
+        input_field_placeholder="Bo'limni tanlang..."
+    )
     
