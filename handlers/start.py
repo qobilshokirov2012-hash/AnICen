@@ -7,9 +7,10 @@ from keyboards import get_start_keyboard
 router = Router()
 
 @router.message(CommandStart())
-async def cmd_start(message: types.Message, db): # db obyekti middleware orqali keladi deb faraz qilamiz
+async def cmd_start(message: types.Message, db):
     user_id = message.from_user.id
     first_name = message.from_user.first_name
+    # Hozirgi vaqtni sen xohlagan formatda olamiz
     current_time = datetime.now().strftime("%d.%m.%Y | %H:%M")
     
     # Foydalanuvchini bazadan qidiramiz
@@ -24,28 +25,28 @@ async def cmd_start(message: types.Message, db): # db obyekti middleware orqali 
             "last_active": current_time,
             "lang": "uz"
         })
+        # strings.py ichidagi START_NEW_USER formatini to'ldiramiz
         text = strings.START_NEW_USER.format(
             first_name=first_name, 
             user_id=user_id, 
             start_time=current_time
         )
-        await message.answer(text, reply_markup=get_start_keyboard(), parse_mode="HTML")
+        await message.answer(text, reply_markup=get_start_keyboard())
     else:
-        # Eski foydalanuvchi
+        # Eski foydalanuvchi - oxirgi kirgan vaqtini saqlab olamiz
         last_start = user.get("last_active", "Noma'lum")
         
-        # Oxirgi faollikni yangilaymiz
+        # Bazada oxirgi faollikni yangilaymiz
         await db.users.update_one(
             {"user_id": user_id}, 
-            {"$set": {"last_active": current_time}}
+            {"$set": {"last_active": current_time, "first_name": first_name}} # Ismi o'zgargan bo'lsa yangilab qo'yadi
         )
         
-        # Bu yerda mantiq: Agar xabar o'chirib tashlanmagan bo'lsa "Alla qachon botdasiz" 
-        # lekin har doim ham buni aniqlab bo'lmaydi, shuning uchun "Yana ko'rishganimizdan xursandman" varianti ketadi
+        # Sening xohishing bo'yicha: qayta start bosilgandagi xabar
         text = strings.START_EXISTING_USER.format(
             first_name=first_name, 
             user_id=user_id, 
             last_start=last_start
         )
-        await message.answer(text, reply_markup=get_start_keyboard(), parse_mode="HTML")
+        await message.answer(text, reply_markup=get_start_keyboard())
         
