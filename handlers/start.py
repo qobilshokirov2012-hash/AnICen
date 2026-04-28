@@ -1,81 +1,51 @@
-from aiogram import Router, F, types
+from aiogram import Router, types
 from aiogram.filters import CommandStart
-from aiogram.enums import ParseMode
-from motor.motor_asyncio import AsyncIOMotorClient
-from os import getenv
-from datetime import datetime, timezone
-
-# config.py va keyboards.py dan importlar
-from config import EMOJIS
-from keyboards import (
-    language_selection_keyboard,
-    main_reply_keyboard
-)
+from datetime import datetime
+import strings
+from keyboards import get_start_keyboard
 
 router = Router()
 
-# Ma'lumotlar bazasi ulanishi
-client = AsyncIOMotorClient(getenv("MONGO_URL"))
-db = client['anicen_v2']
-users_collection = db['users']
-
-# 1. START BUYRUG'I
 @router.message(CommandStart())
-async def start_command(message: types.Message):
+async def cmd_start(message: types.Message, db): # db obyekti middleware orqali keladi deb faraz qilamiz
     user_id = message.from_user.id
-    user_data = await users_collection.find_one({"user_id": user_id})
+    first_name = message.from_user.first_name
+    current_time = datetime.now().strftime("%d.%m.%Y | %H:%M")
     
-    # Agar foydalanuvchi bazada bo'lmasa - Til tanlashni ko'rsatamiz
-    if not user_data:
-        text = (
-            f"<tg-emoji emoji-id='{EMOJIS['new']}'>🆕</tg-emoji> <b>Xush kelibsiz! / Welcome!</b>\n\n"
-            f"AnICen botiga xush kelibsiz. Davom etish uchun tilni tanlang:\n"
-            f"Please select your language to continue:\n\n"
-            f"━━━━━━━━━━━━━━━\n"
-            f"<tg-emoji emoji-id='{EMOJIS['jap']}'>🇯🇵</tg-emoji> <i>O'zbekistonning eng katta anime portali!</i>"
+    # Foydalanuvchini bazadan qidiramiz
+    user = await db.users.find_one({"user_id": user_id})
+    
+    if not user:
+        # Yangi foydalanuvchi
+        await db.users.insert_one({
+            "user_id": user_id,
+            "first_name": first_name,
+            "joined_at": current_time,
+            "last_active": current_time,
+            "lang": "uz"
+        })
+        text = strings.START_NEW_USER.format(
+            first_name=first_name, 
+            user_id=user_id, 
+            start_time=current_time
         )
-        await message.answer(text, reply_markup=language_selection_keyboard(), parse_mode=ParseMode.HTML)
+        await message.answer(text, reply_markup=get_start_keyboard(), parse_mode="HTML")
     else:
-        # Agar foydalanuvchi allaqachon bo'lsa - Asosiy menyu
-        first_name = user_data.get("first_name", message.from_user.first_name)
-        text = (
-            f"<tg-emoji emoji-id='{EMOJIS['gojo']}'>👓</tg-emoji> <b>Salom, {first_name}!</b>\n\n"
-            f"Sizni yana ko'rganimizdan xursandmiz! Bugun qanday anime ko'ramiz?\n\n"
-            f"<tg-emoji emoji-id='{EMOJIS['top']}'>🔝</tg-emoji> <b>Trenddagi animelar yangilandi!</b>"
+        # Eski foydalanuvchi
+        last_start = user.get("last_active", "Noma'lum")
+        
+        # Oxirgi faollikni yangilaymiz
+        await db.users.update_one(
+            {"user_id": user_id}, 
+            {"$set": {"last_active": current_time}}
         )
-        await message.answer(text, reply_markup=main_reply_keyboard(), parse_mode=ParseMode.HTML)
-
-# 2. TILNI SAQLASH MANTIQI
-@router.callback_query(F.data.startswith("set_lang_"))
-async def save_language_callback(callback: types.CallbackQuery):
-    lang_code = callback.data.split("_")[-1]
-    user_id = callback.from_user.id
-    
-    # Bazaga foydalanuvchini qo'shish yoki yangilash
-    await users_collection.update_one(
-        {"user_id": user_id},
-        {"$set": {
-            "lang": lang_code,
-            "first_name": callback.from_user.first_name,
-            "ryo": 16, # Bonus start ryo
-            "rank": "Yangi",
-            "watched_count": 0,
-            "favorites": [],
-            "notify": True,
-            "daily_reminder": True,
-            "join_date": datetime.now(timezone.utc)
-        }},
-        upsert=True
-    )
-    
-    # Muvaffaqiyatli xabar
-    await callback.answer(f"✅ Til tanlandi: {lang_code.upper()}")
-    await callback.message.delete()
-    
-    success_text = (
-        f"<tg-emoji emoji-id='{EMOJIS['correct']}'>✅</tg-emoji> <b>Muvaffaqiyatli sozlandi!</b>\n\n"
-        f"Sizga <b>16 Ryo</b> start bonusi berildi <tg-emoji emoji-id='{EMOJIS['money']}'>💴</tg-emoji>\n\n"
-        f"Keling, sarguzashtni boshlaymiz!"
-    )
-    await callback.message.answer(success_text, reply_markup=main_reply_keyboard(), parse_mode=ParseMode.HTML)
-  
+        
+        # Bu yerda mantiq: Agar xabar o'chirib tashlanmagan bo'lsa "Alla qachon botdasiz" 
+        # lekin har doim ham buni aniqlab bo'lmaydi, shuning uchun "Yana ko'rishganimizdan xursandman" varianti ketadi
+        text = strings.START_EXISTING_USER.format(
+            first_name=first_name, 
+            user_id=user_id, 
+            last_start=last_start
+        )
+        await message.answer(text, reply_markup=get_start_keyboard(), parse_mode="HTML")
+        
