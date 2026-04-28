@@ -1,13 +1,13 @@
 from config import EMOJIS
 
-# Emoji formatlash funksiyasi (Premium emojilar uchun)
+# Emoji formatlash funksiyasi
 def get_emoji(emoji_id: str) -> str:
     return f'<tg-emoji emoji_id="{emoji_id}"></tg-emoji>'
 
-# Start xabarlari
+# Yangi foydalanuvchi uchun
 START_NEW_USER = (
     f"{get_emoji(EMOJIS['naruto'])} Assalomu alaykum, {{first_name}}!\n\n"
-    f"👋 Anime botga xush kelibsiz!\n\n"
+    f"{get_emoji(EMOJIS['wave'])} Anime botga xush kelibsiz!\n\n"
     f"{get_emoji(EMOJIS['id'])} Sizning ID: <code>{{user_id}}</code>\n"
     f"{get_emoji(EMOJIS['date'])} Boshlangan vaqt: {{start_time}}\n\n"
     f"{get_emoji(EMOJIS['tv'])} Bu bot orqali siz:\n"
@@ -18,6 +18,7 @@ START_NEW_USER = (
     f"{get_emoji(EMOJIS['question'])} Boshlash uchun quyidagi tugmalardan birini tanlang:"
 )
 
+# Qayta kirgan foydalanuvchi uchun
 START_EXISTING_USER = (
     f"{get_emoji(EMOJIS['gojo'])} Yana ko‘rishganimizdan xursandman, {{first_name}}!\n\n"
     f"{get_emoji(EMOJIS['id'])} ID: <code>{{user_id}}</code>\n"
@@ -26,6 +27,7 @@ START_EXISTING_USER = (
     f"Quyidagi tugmalardan foydalaning!"
 )
 
+# Bot ichida turib start bosilganda
 ALREADY_IN_BOT = (
     f"{get_emoji(EMOJIS['kakashi'])} Siz allaqachon botdasiz!\n\n"
     f"{get_emoji(EMOJIS['id'])} ID: <code>{{user_id}}</code>\n"
